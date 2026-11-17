@@ -74,7 +74,7 @@
   .item-price-tag { text-align: center; font-weight: 900; font-size: 0.82rem; color: var(--gold-main); background: rgba(0,0,0,0.4); padding: 3px 6px; border-radius: 6px; }
 
   .cart-panel { background: var(--bg-panel); border-top: 1px solid var(--border-gold); border-radius: 14px 14px 0 0; padding: 9px 10px; flex-shrink: 0; }
-  .cart-list { max-height: 75px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
+  .cart-list { max-height: 95px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
   .cart-empty { text-align: center; color: var(--text-muted); padding: 8px; font-size: 0.78rem; }
   .cart-row { background: var(--bg-card); border-radius: 8px; padding: 5px 8px; display: flex; align-items: center; justify-content: space-between; font-size: 0.76rem; }
   .qty-btn { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main); font-weight: 900; cursor: pointer; }
@@ -157,7 +157,7 @@
           <!-- Cart Panel -->
           <div class="cart-panel">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-              <span style="font-size:0.82rem; font-weight:800; color:var(--gold-main);" data-i18n="cartTitle">الفاتورة الحالية</span>
+              <span style="font-size:0.82rem; font-weight:800; color:var(--gold-main);" data-i18n="cartTitle">الفاتورة الحالية (التفاصيل)</span>
               <input type="text" id="customerNameInput" class="input-field" style="max-width:135px; padding:4px 8px; font-size:0.74rem;" data-i18n-placeholder="customerPlaceholder" placeholder="العميل / الطاولة">
             </div>
 
@@ -187,7 +187,7 @@
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1.3fr; gap:6px;">
-              <button id="holdOrderBtn" class="btn btn-dark">⏳ <span data-i18n="holdBtn">تعليق</span></button>
+              <button id="holdOrderBtn" class="btn btn-dark">⏳ <span data-i18n="holdBtn">تعليق الأوردر</span></button>
               <button id="checkoutBtn" class="btn btn-gold">✅ <span data-i18n="payBtn">إتمام ودفع</span></button>
             </div>
           </div>
@@ -347,13 +347,13 @@ document.addEventListener('DOMContentLoaded', () => {
     ar: {
       searchPlaceholder: "ابحث عن مشروب أو صنف...",
       allCategories: "الكل",
-      cartTitle: "الفاتورة الحالية",
+      cartTitle: "الفاتورة الحالية (التفاصيل)",
       customerPlaceholder: "العميل / الطاولة",
       discountLabel: "الخصم (%)",
       taxLabel: "الضريبة (%)",
       saleDateLabel: "التاريخ",
       grandTotalLabel: "الإجمالي النهائي:",
-      holdBtn: "تعليق",
+      holdBtn: "تعليق الأوردر",
       payBtn: "إتمام ودفع",
       pendingTitle: "الأوردرات المعلقة والواردة من المنيو",
       reportsTitle: "التقارير اليومية والعهدة",
@@ -403,13 +403,13 @@ document.addEventListener('DOMContentLoaded', () => {
     en: {
       searchPlaceholder: "Search drinks or items...",
       allCategories: "All",
-      cartTitle: "Current Bill",
+      cartTitle: "Current Bill (Details)",
       customerPlaceholder: "Customer / Table",
       discountLabel: "Discount (%)",
       taxLabel: "Tax (%)",
       saleDateLabel: "Date",
       grandTotalLabel: "Grand Total:",
-      holdBtn: "Hold",
+      holdBtn: "Hold Order",
       payBtn: "Pay & Checkout",
       pendingTitle: "Pending & Incoming Menu Orders",
       reportsTitle: "Daily Reports & Custody",
@@ -741,7 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('');
   }
 
-  // دالة سحب الأوردر الوارد لتظهر تفاصيله كاملة في شاشة الكاشير (الفاتورة الحالية)
+  // دالة سحب الأوردر الوارد وعرض تفاصيله بالكامل داخل شاشة الكاشير (الفاتورة الحالية)
   window.loadOrderToCart = function(id) {
     let ord = state.pending.find(o => o.id === id);
     let isPending = true;
@@ -751,11 +751,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (!ord || !ord.cart) return;
 
-    // نقل الأصناف والكميات واسم العميل إلى الفاتورة الحالية
+    // تعبئة الفاتورة الحالية بالأصناف والكميات واسم العميل
     state.cart = ord.cart.map(c => ({ itemId: c.itemId, qty: c.qty }));
     document.getElementById('customerNameInput').value = ord.customer || '';
 
-    // إزالته من القائمة المعلقة والسحابة لكي لا يتكرر
+    // إزالة الأوردر من القائمة المعلقة وسحابة فايربيس لكي لا يتكرر
     if (isPending) {
       state.pending = state.pending.filter(o => o.id !== id);
       try {
@@ -771,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPendingOrders();
     renderCart();
     switchTab('pos');
-    alert('📥 تم سحب الأوردر إلى شاشة الكاشير بكامل تفاصيله بنجاح! يمكنك إتمامه أو تعليقه.');
+    alert('📥 تم سحب الأوردر وعرض تفاصيله الكاملة في شاشة الكاشير بنجاح! يمكنك مراجعته، إتمامه أو تعليقه.');
   };
 
   window.processOrder = function(id) {
