@@ -741,7 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('');
   }
 
-  // دالة لجلب الأوردر الوارد إلى شاشة الفاتورة الحالية (POS Cart) وحذفه من المعلقة والسحابة
+  // دالة سحب الأوردر الوارد للفاتورة الحالية وحذفه من المعلقة والسحابة
   window.loadOrderToCart = function(id) {
     let ord = state.pending.find(o => o.id === id);
     let isPending = true;
@@ -751,11 +751,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (!ord || !ord.cart) return;
 
-    // تعبئة السلة بالأصناف
     state.cart = ord.cart.map(c => ({ itemId: c.itemId, qty: c.qty }));
     document.getElementById('customerNameInput').value = ord.customer || '';
 
-    // إزالته من القائمة المعلقة المحلية
     if (isPending) {
       state.pending = state.pending.filter(o => o.id !== id);
       try {
@@ -1033,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { console.log('Audio error'); }
   }
 
-  // الاستماع اللحظي للطلبات الواردة وتحويل الإجمالي لرقم صحيح لتجنب NaN وتشغيل التنبيه
+  // الاستماع اللحظي للطلبات الواردة وتصحيح الإجمالي وتنبيه الكاشير
   posCloudDb.ref('pendingOrders').on('child_added', (snapshot) => {
     const newOrder = snapshot.val();
     if (newOrder && newOrder.status === 'pending') {
