@@ -59,33 +59,26 @@
   .input-field { width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 7px 10px; border-radius: 9px; font-size: 0.82rem; outline: none; }
   .input-field:focus { border-color: var(--gold-main); }
 
-  .category-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; flex-shrink: 0; }
-  .cat-chip { background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 5px 11px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; white-space: nowrap; cursor: pointer; }
-  .cat-chip.active { background: var(--gold-gradient); color: #0b0d12; border-color: transparent; }
+  /* شاشة الفاتورة الشاملة في الواجهة الرئيسية */
+  .cart-panel-full { background: var(--bg-panel); border: 1px solid var(--border-gold); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+  .cart-list-full { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .cart-empty { text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem; }
+  
+  .cart-row-detailed { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; }
+  .cart-row-top { display: flex; justify-content: space-between; align-items: center; }
+  .cart-item-name { font-weight: 800; color: var(--text-main); font-size: 0.82rem; }
+  .cart-item-cat { font-size: 0.65rem; color: var(--gold-light); background: rgba(212,175,55,0.12); padding: 1px 6px; border-radius: 4px; }
+  .cart-row-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; border-top: 1px dashed var(--border-subtle); pt: 4px; }
+  
+  .qty-btn { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main); font-weight: 900; cursor: pointer; }
 
-  .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; overflow-y: auto; flex: 1; padding-bottom: 8px; }
-  .item-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 11px; padding: 7px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
-  .item-card:active { transform: scale(0.97); }
-  .item-card.special-item { border: 1.5px solid var(--gold-main); background: linear-gradient(180deg, rgba(212,175,55,0.14) 0%, var(--bg-card) 100%); }
-  .special-ribbon { position: absolute; top: 5px; inset-inline-start: 5px; background: var(--gold-gradient); color: #000; font-size: 0.6rem; font-weight: 900; padding: 1px 6px; border-radius: 5px; z-index: 2; }
-  .item-thumb { width: 100%; height: 68px; border-radius: 8px; overflow: hidden; background: #10131a; margin-bottom: 5px; }
-  .item-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .item-name { font-size: 0.78rem; font-weight: 700; text-align: center; margin-bottom: 4px; line-height: 1.25; }
-  .item-price-tag { text-align: center; font-weight: 900; font-size: 0.82rem; color: var(--gold-main); background: rgba(0,0,0,0.4); padding: 3px 6px; border-radius: 6px; }
-
-  .cart-panel { background: var(--bg-panel); border-top: 1px solid var(--border-gold); border-radius: 14px 14px 0 0; padding: 9px 10px; flex-shrink: 0; }
-  .cart-list { max-height: 95px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
-  .cart-empty { text-align: center; color: var(--text-muted); padding: 8px; font-size: 0.78rem; }
-  .cart-row { background: var(--bg-card); border-radius: 8px; padding: 5px 8px; display: flex; align-items: center; justify-content: space-between; font-size: 0.76rem; }
-  .qty-btn { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main); font-weight: 900; cursor: pointer; }
-
-  .cart-extras { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+  .cart-extras { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; flex-shrink: 0; }
   .cart-extras label { display: block; font-size: 0.62rem; color: var(--text-muted); margin-bottom: 2px; }
-  .cart-extras input { padding: 5px 6px; font-size: 0.75rem; }
+  .cart-extras input { padding: 6px; font-size: 0.75rem; }
 
-  .totals-row { display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 0.92rem; color: var(--gold-main); margin-bottom: 7px; padding-top: 4px; border-top: 1px solid var(--border-subtle); }
+  .totals-row { display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 0.98rem; color: var(--gold-main); margin-bottom: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); flex-shrink: 0; }
 
-  .btn { padding: 8px 10px; border-radius: 10px; font-weight: 800; font-size: 0.78rem; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .btn { padding: 9px 10px; border-radius: 10px; font-weight: 800; font-size: 0.8rem; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
   .btn-gold { background: var(--gold-gradient); color: #0b0d12; width: 100%; }
   .btn-dark { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle); }
   .btn-danger { background: rgba(239, 68, 68, 0.18); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.4); }
@@ -145,23 +138,16 @@
     <!-- Main Workspace -->
     <main class="main-content">
 
-      <!-- 1. POS VIEW -->
+      <!-- 1. POS VIEW (شاشة الكاشير والفاتورة المفصلة بالكامل) -->
       <section id="view-pos" class="view-section active">
         <div class="pos-container">
-          <div>
-            <input type="text" id="posSearchInput" class="input-field" data-i18n-placeholder="searchPlaceholder" placeholder="ابحث عن مشروب أو صنف...">
-          </div>
-          <div id="posCategoryStrip" class="category-strip"></div>
-          <div id="posItemsGrid" class="items-grid"></div>
-
-          <!-- Cart Panel -->
-          <div class="cart-panel">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-              <span style="font-size:0.82rem; font-weight:800; color:var(--gold-main);" data-i18n="cartTitle">الفاتورة الحالية (التفاصيل)</span>
-              <input type="text" id="customerNameInput" class="input-field" style="max-width:135px; padding:4px 8px; font-size:0.74rem;" data-i18n-placeholder="customerPlaceholder" placeholder="العميل / الطاولة">
+          <div class="cart-panel-full">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:0.88rem; font-weight:900; color:var(--gold-main);" data-i18n="cartTitle">تفاصيل الفاتورة الشاملة</span>
+              <input type="text" id="customerNameInput" class="input-field" style="max-width:145px; padding:5px 8px; font-size:0.76rem;" data-i18n-placeholder="customerPlaceholder" placeholder="العميل / الطاولة">
             </div>
 
-            <div id="cartItemsList" class="cart-list"></div>
+            <div id="cartItemsListFull" class="cart-list-full"></div>
 
             <div class="cart-extras">
               <div>
@@ -194,9 +180,9 @@
         </div>
       </section>
 
-      <!-- 2. PENDING ORDERS VIEW -->
+      <!-- 2. PENDING ORDERS VIEW (الأوردرات المعلقة التي يعلقها الكاشير) -->
       <section id="view-pending" class="view-section">
-        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;" data-i18n="pendingTitle">الأوردرات المعلقة والواردة من المنيو</h3>
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;" data-i18n="pendingTitle">الأوردرات المعلقة الخاصة بك</h3>
         <div id="pendingOrdersList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1;"></div>
       </section>
 
@@ -216,7 +202,6 @@
           </div>
         </div>
 
-        <!-- Custom Date Range Box -->
         <div id="customDateRangeBox" class="panel-box" style="display:none; grid-template-columns: 1fr 1fr; gap:6px; padding:6px 10px;">
           <div>
             <label style="font-size:0.6rem; color:var(--text-muted);" data-i18n="fromDateLabel">من تاريخ</label>
@@ -228,7 +213,6 @@
           </div>
         </div>
 
-        <!-- Exchange Rate Input Box -->
         <div class="panel-box" style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px;">
           <span style="font-size:0.72rem; font-weight:800; color:var(--gold-light);" data-i18n="exchangeRateLabel">سعر صرف اليورو (EUR to EGP):</span>
           <input type="number" id="exchangeRateInput" class="input-field" value="55" step="0.1" style="max-width:80px; text-align:center; font-weight:850; color:var(--gold-main);">
@@ -249,7 +233,6 @@
           </div>
         </div>
 
-        <!-- Expenses Management Box -->
         <div class="panel-box">
           <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;" data-i18n="expensesBoxTitle">تسجيل المصروفات اليومية</h4>
           <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr auto; gap:5px; align-items:flex-end;">
@@ -331,7 +314,7 @@
     <!-- Bottom Navigation Bar -->
     <nav class="nav-bar">
       <button class="nav-btn active" data-tab="pos"><span class="icon">🧾</span><span data-i18n="tabPos">POS</span></button>
-      <button class="nav-btn" data-tab="pending"><span class="icon">🔔</span><span data-i18n="tabPending">المعلقة</span></button>
+      <button class="nav-btn" data-tab="pending"><span class="icon">⏳</span><span data-i18n="tabPending">المعلقة</span></button>
       <button class="nav-btn" data-tab="reports"><span class="icon">📊</span><span data-i18n="tabReports">التقارير</span></button>
       <button class="nav-btn" data-tab="menu" onclick="window.location.href='https://osama14492.github.io/FRESHLY-MENU-/'"><span class="icon">📱</span><span data-i18n="tabMenu">المنيو</span></button>
       <button class="nav-btn" data-tab="settings" id="settingsNavBtn"><span class="icon">⚙️</span><span data-i18n="tabSettings">الإعدادات</span></button>
@@ -345,9 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const I18N = {
     ar: {
-      searchPlaceholder: "ابحث عن مشروب أو صنف...",
-      allCategories: "الكل",
-      cartTitle: "الفاتورة الحالية (التفاصيل)",
+      cartTitle: "تفاصيل الفاتورة الشاملة",
       customerPlaceholder: "العميل / الطاولة",
       discountLabel: "الخصم (%)",
       taxLabel: "الضريبة (%)",
@@ -355,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
       grandTotalLabel: "الإجمالي النهائي:",
       holdBtn: "تعليق الأوردر",
       payBtn: "إتمام ودفع",
-      pendingTitle: "الأوردرات المعلقة والواردة من المنيو",
+      pendingTitle: "الأوردرات المعلقة الخاصة بك",
       reportsTitle: "التقارير اليومية والعهدة",
       exchangeRateLabel: "سعر صرف اليورو (EUR to EGP):",
       fromDateLabel: "من تاريخ",
@@ -394,16 +375,14 @@ document.addEventListener('DOMContentLoaded', () => {
       tabReports: "التقارير",
       tabMenu: "المنيو",
       tabSettings: "الإعدادات",
-      emptyCart: "الفاتورة فارغة",
+      emptyCart: "الفاتورة فارغة (لم يتم إضافة أصناف)",
       alertOrderCompleted: "تم إتمام الدفع بنجاح وتسجيل المبيعات! ✅",
       alertOrderHeld: "تم تعليق الفاتورة بنجاح ⏳",
       alertExpenseAdded: "تم تسجيل المصروف بنجاح 💸",
       grandRow: "الإجمالي العام"
     },
     en: {
-      searchPlaceholder: "Search drinks or items...",
-      allCategories: "All",
-      cartTitle: "Current Bill (Details)",
+      cartTitle: "Complete Bill Details",
       customerPlaceholder: "Customer / Table",
       discountLabel: "Discount (%)",
       taxLabel: "Tax (%)",
@@ -411,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
       grandTotalLabel: "Grand Total:",
       holdBtn: "Hold Order",
       payBtn: "Pay & Checkout",
-      pendingTitle: "Pending & Incoming Menu Orders",
+      pendingTitle: "Your Held Orders",
       reportsTitle: "Daily Reports & Custody",
       exchangeRateLabel: "EUR to EGP Exchange Rate:",
       fromDateLabel: "From Date",
@@ -491,12 +470,9 @@ document.addEventListener('DOMContentLoaded', () => {
       categories: JSON.parse(localStorage.getItem('fp_categories_v3') || JSON.stringify(DEFAULT_CATEGORIES)),
       items: JSON.parse(localStorage.getItem('fp_items_v3') || JSON.stringify(DEFAULT_ITEMS)),
       sales: JSON.parse(localStorage.getItem('fp_sales_v3') || '[]'),
-      pending: JSON.parse(localStorage.getItem('fp_pending') || '[]'),
       held: JSON.parse(localStorage.getItem('fp_held_v3') || '[]'),
       custodyByDate: JSON.parse(localStorage.getItem('fp_custody_v3') || JSON.stringify({ [todayStr]: 1000 })),
       expensesByDate: JSON.parse(localStorage.getItem('fp_expenses_v3') || '{}'),
-      searchQuery: '',
-      selectedCat: 'all',
       cart: []
     };
   }
@@ -506,10 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function persistState() {
     localStorage.setItem('fp_lang', state.lang);
     localStorage.setItem('fp_currency', state.currency);
-    localStorage.setItem('fp_categories_v3', JSON.stringify(state.categories));
-    localStorage.setItem('fp_items_v3', JSON.stringify(state.items));
     localStorage.setItem('fp_sales_v3', JSON.stringify(state.sales));
-    localStorage.setItem('fp_pending', JSON.stringify(state.pending));
     localStorage.setItem('fp_held_v3', JSON.stringify(state.held));
     localStorage.setItem('fp_custody_v3', JSON.stringify(state.custodyByDate));
     localStorage.setItem('fp_expenses_v3', JSON.stringify(state.expensesByDate));
@@ -546,74 +519,20 @@ document.addEventListener('DOMContentLoaded', () => {
     return item.name || '';
   }
 
+  function getCategoryTitle(catId) {
+    const cat = state.categories.find(c => c.id === catId);
+    if (!cat) return 'عام';
+    return cat.names[state.lang] || cat.names.ar || 'عام';
+  }
+
   function getUnitPrice(item) {
     if (!item) return 0;
     return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
   }
 
-  function makeDrinkImage(label, accent = '#d4af37') {
-    const clean = String(label || 'Drink').replace(/[<>&'"]/g, '').substring(0, 18);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="140" viewBox="0 0 220 140">
-      <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1e2433"/><stop offset="100%" stop-color="#0f1219"/></linearGradient></defs>
-      <rect width="220" height="140" fill="url(#bg)"/>
-      <circle cx="110" cy="54" r="32" fill="${accent}" opacity="0.18"/>
-      <path d="M94 34 L126 34 L121 76 L99 76 Z" fill="${accent}" opacity="0.35" stroke="${accent}" stroke-width="2.5"/>
-      <path d="M110 34 L117 18 L128 15" fill="none" stroke="${accent}" stroke-width="2.5" stroke-linecap="round"/>
-      <ellipse cx="110" cy="34" rx="16" ry="3.5" fill="${accent}" opacity="0.7"/>
-      <text x="110" y="112" fill="#f8fafc" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle">${clean}</text>
-    </svg>`;
-    return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
-  }
-
-  function renderCategoryStrip() {
-    const strip = document.getElementById('posCategoryStrip');
-    let html = `<button class="cat-chip ${state.selectedCat === 'all' ? 'active' : ''}" data-cat="all">${t('allCategories')}</button>`;
-    state.categories.forEach(c => {
-      html += `<button class="cat-chip ${state.selectedCat === c.id ? 'active' : ''}" data-cat="${c.id}">${c.names[state.lang] || c.names.ar}</button>`;
-    });
-    strip.innerHTML = html;
-
-    strip.querySelectorAll('.cat-chip').forEach(btn => {
-      btn.addEventListener('click', () => {
-        state.selectedCat = btn.getAttribute('data-cat');
-        renderCategoryStrip();
-        renderPosItems();
-      });
-    });
-  }
-
-  function renderPosItems() {
-    const grid = document.getElementById('posItemsGrid');
-    const q = state.searchQuery.trim().toLowerCase();
-    const filtered = state.items.filter(item => {
-      const matchCat = state.selectedCat === 'all' || item.categoryId === state.selectedCat;
-      const title = getItemTitle(item).toLowerCase();
-      const matchQ = !q || title.includes(q);
-      return matchCat && matchQ;
-    });
-
-    grid.innerHTML = filtered.map(item => `
-      <div class="item-card ${item.special ? 'special-item' : ''}" data-id="${item.id}">
-        ${item.special ? `<span class="special-ribbon">★ مميز</span>` : ''}
-        <div class="item-thumb"><img src="${item.image || makeDrinkImage(getItemTitle(item))}" alt=""></div>
-        <div class="item-name">${getItemTitle(item)}</div>
-        <div class="item-price-tag">${formatMoney(getUnitPrice(item))}</div>
-      </div>
-    `).join('');
-
-    grid.querySelectorAll('.item-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const id = card.getAttribute('data-id');
-        const ex = state.cart.find(c => c.itemId === id);
-        if (ex) ex.qty += 1;
-        else state.cart.push({ itemId: id, qty: 1 });
-        renderCart();
-      });
-    });
-  }
-
-  function renderCart() {
-    const list = document.getElementById('cartItemsList');
+  // عرض تفاصيل الفاتورة كاملة (القسم، الصنف، السعر، الكمية، الإجمالي)
+  function renderCartFull() {
+    const list = document.getElementById('cartItemsListFull');
     if (state.cart.length === 0) {
       list.innerHTML = `<div class="cart-empty">${t('emptyCart')}</div>`;
       document.getElementById('grandTotalDisplay').textContent = formatMoney(0);
@@ -626,14 +545,22 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!item) return '';
       const unit = getUnitPrice(item);
       subtotal += unit * c.qty;
+      const catName = getCategoryTitle(item.categoryId);
+
       return `
-        <div class="cart-row">
-          <span style="font-weight:700;">${getItemTitle(item)}</span>
-          <div style="display:flex; align-items:center; gap:5px;">
-            <span style="color:var(--gold-main); font-weight:800;">${formatMoney(unit * c.qty)}</span>
-            <button class="qty-btn" data-act="dec" data-id="${c.itemId}">-</button>
-            <span style="font-weight:800; min-width:14px; text-align:center;">${c.qty}</span>
-            <button class="qty-btn" data-act="inc" data-id="${c.itemId}">+</button>
+        <div class="cart-row-detailed">
+          <div class="cart-row-top">
+            <span class="cart-item-name">${getItemTitle(item)}</span>
+            <span class="cart-item-cat">${catName}</span>
+          </div>
+          <div class="cart-row-bottom">
+            <span style="color:var(--text-muted); font-size:0.72rem;">السعر الفردي: <strong style="color:var(--gold-light);">${formatMoney(unit)}</strong></span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="qty-btn" data-act="dec" data-id="${c.itemId}">-</button>
+              <span style="font-weight:900; min-width:16px; text-align:center; color:var(--gold-light);">${c.qty}</span>
+              <button class="qty-btn" data-act="inc" data-id="${c.itemId}">+</button>
+              <span style="color:var(--gold-main); font-weight:900; margin-inline-start:4px;">${formatMoney(unit * c.qty)}</span>
+            </div>
           </div>
         </div>
       `;
@@ -650,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
           state.cart[idx].qty--;
           if (state.cart[idx].qty <= 0) state.cart.splice(idx, 1);
         }
-        renderCart();
+        renderCartFull();
       });
     });
 
@@ -694,93 +621,78 @@ document.addEventListener('DOMContentLoaded', () => {
     alert(t('alertOrderCompleted'));
     state.cart = [];
     document.getElementById('customerNameInput').value = '';
-    renderCart();
+    renderCartFull();
     renderReports();
   });
 
+  // تعليق الأوردر (الأوردرات التي تقوم بتعليقها بنفسك في الشاشة المخصصة)
   document.getElementById('holdOrderBtn').addEventListener('click', () => {
     if (state.cart.length === 0) return alert(t('emptyCart'));
     const customer = document.getElementById('customerNameInput').value.trim() || 'معلق';
     const saleDate = document.getElementById('saleDateInput').value || todayStr;
+
+    let subtotal = 0;
+    state.cart.forEach(c => {
+      const it = state.items.find(i => i.id === c.itemId);
+      subtotal += getUnitPrice(it) * c.qty;
+    });
 
     state.held.unshift({
       id: 'HELD-' + Math.floor(100 + Math.random() * 900),
       customer,
       date: saleDate,
       currency: state.currency,
-      cart: [...state.cart]
+      cart: [...state.cart],
+      total: subtotal
     });
     persistState();
     alert(t('alertOrderHeld'));
     state.cart = [];
-    renderCart();
-    renderPendingOrders();
+    document.getElementById('customerNameInput').value = '';
+    renderCartFull();
+    renderHeldOrders();
   });
 
-  function renderPendingOrders() {
+  function renderHeldOrders() {
     const container = document.getElementById('pendingOrdersList');
-    const allOrders = [...state.pending, ...state.held];
-
-    if (allOrders.length === 0) {
+    
+    if (state.held.length === 0) {
       container.innerHTML = `<div class="cart-empty">لا توجد أوردرات معلقة حالياً</div>`;
       return;
     }
 
-    container.innerHTML = allOrders.map(ord => `
+    container.innerHTML = state.held.map(ord => `
       <div class="panel-box" style="display:flex; justify-content:space-between; align-items:center; padding:8px;">
         <div>
           <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">${ord.customer} (${ord.id})</div>
           <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — إجمالي: ${formatMoney(ord.total || 0)}</div>
         </div>
         <div style="display:flex; gap:4px;">
-          <button class="btn btn-dark" style="padding:5px 6px; font-size:0.65rem;" onclick="loadOrderToCart('${ord.id}')" title="سحب للفاتورة الحالية">📥 سحب</button>
-          <button class="btn btn-gold" style="padding:5px 8px; font-size:0.7rem;" onclick="processOrder('${ord.id}')">إتمام</button>
-          <button class="btn btn-danger" style="padding:5px 8px; font-size:0.7rem;" onclick="removeOrder('${ord.id}')">حذف</button>
+          <button class="btn btn-dark" style="padding:5px 6px; font-size:0.65rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 سحب للفاتورة</button>
+          <button class="btn btn-gold" style="padding:5px 8px; font-size:0.7rem;" onclick="processHeldOrder('${ord.id}')">إتمام ودفع</button>
+          <button class="btn btn-danger" style="padding:5px 8px; font-size:0.7rem;" onclick="removeHeldOrder('${ord.id}')">حذف</button>
         </div>
       </div>
     `).join('');
   }
 
-  // دالة سحب الأوردر الوارد وعرض تفاصيله بالكامل داخل شاشة الكاشير (الفاتورة الحالية)
-  window.loadOrderToCart = function(id) {
-    let ord = state.pending.find(o => o.id === id);
-    let isPending = true;
-    if (!ord) {
-      ord = state.held.find(o => o.id === id);
-      isPending = false;
-    }
+  window.loadHeldOrderToCart = function(id) {
+    const ord = state.held.find(o => o.id === id);
     if (!ord || !ord.cart) return;
 
-    // تعبئة الفاتورة الحالية بالأصناف والكميات واسم العميل
     state.cart = ord.cart.map(c => ({ itemId: c.itemId, qty: c.qty }));
     document.getElementById('customerNameInput').value = ord.customer || '';
-
-    // إزالة الأوردر من القائمة المعلقة وسحابة فايربيس لكي لا يتكرر
-    if (isPending) {
-      state.pending = state.pending.filter(o => o.id !== id);
-      try {
-        posCloudDb.ref('pendingOrders').orderByChild('id').equalTo(id).once('value', snapshot => {
-          snapshot.forEach(childSnap => { childSnap.ref.remove(); });
-        });
-      } catch (e) { console.log("Cloud sync note"); }
-    } else {
-      state.held = state.held.filter(o => o.id !== id);
-    }
+    state.held = state.held.filter(o => o.id !== id);
 
     persistState();
-    renderPendingOrders();
-    renderCart();
+    renderHeldOrders();
+    renderCartFull();
     switchTab('pos');
-    alert('📥 تم سحب الأوردر وعرض تفاصيله الكاملة في شاشة الكاشير بنجاح! يمكنك مراجعته، إتمامه أو تعليقه.');
+    alert('📥 تم سحب الأوردر المعلق وعرض تفاصيله الكاملة في شاشة الكاشير بنجاح!');
   };
 
-  window.processOrder = function(id) {
-    let ord = state.pending.find(o => o.id === id);
-    let isPending = true;
-    if (!ord) {
-      ord = state.held.find(o => o.id === id);
-      isPending = false;
-    }
+  window.processHeldOrder = function(id) {
+    const ord = state.held.find(o => o.id === id);
     if (!ord) return;
 
     state.sales.unshift({
@@ -792,35 +704,17 @@ document.addEventListener('DOMContentLoaded', () => {
       total: Number(ord.total || 0)
     });
 
-    if (isPending) {
-      state.pending = state.pending.filter(o => o.id !== id);
-      try {
-        posCloudDb.ref('pendingOrders').orderByChild('id').equalTo(id).once('value', snapshot => {
-          snapshot.forEach(childSnap => { childSnap.ref.remove(); });
-        });
-      } catch (e) { console.log("Cloud sync note"); }
-    } else {
-      state.held = state.held.filter(o => o.id !== id);
-    }
-
+    state.held = state.held.filter(o => o.id !== id);
     persistState();
-    renderPendingOrders();
+    renderHeldOrders();
     renderReports();
-    alert('تم اعتماد الأوردر بنجاح! ✅');
+    alert('تم اعتماد الأوردر المعلق وإتمام الدفع بنجاح! ✅');
   };
 
-  window.removeOrder = function(id) {
-    state.pending = state.pending.filter(o => o.id !== id);
+  window.removeHeldOrder = function(id) {
     state.held = state.held.filter(o => o.id !== id);
-    
-    try {
-      posCloudDb.ref('pendingOrders').orderByChild('id').equalTo(id).once('value', snapshot => {
-        snapshot.forEach(childSnap => { childSnap.ref.remove(); });
-      });
-    } catch (e) { console.log("Cloud sync note"); }
-
     persistState();
-    renderPendingOrders();
+    renderHeldOrders();
   };
 
   function renderReports() {
@@ -926,7 +820,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addExpenseBtn').addEventListener('click', () => {
     const d = document.getElementById('expenseDateInput').value || todayStr;
     const amount = Number(document.getElementById('expenseAmountInput').value || 0);
-    const desc = document.getElementById('expenseDescInput').value.trim() || 'مصروف عام';
+    const desc = document.getElementById('expenseDescInput'].value.trim() || 'مصروف عام';
     if (amount <= 0) return alert('يرجى إدخال مبلغ صحيح');
 
     if (!state.expensesByDate[d]) state.expensesByDate[d] = [];
@@ -951,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === name));
     document.querySelectorAll('.view-section').forEach(s => s.classList.toggle('active', s.id === `view-${name}`));
     if (name === 'reports') renderReports();
-    if (name === 'pending') renderPendingOrders();
+    if (name === 'pending') renderHeldOrders();
   }
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -966,9 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.lang = e.target.value;
     persistState();
     applyTranslations();
-    renderCategoryStrip();
-    renderPosItems();
-    renderCart();
+    renderCartFull();
     renderReports();
   });
 
@@ -976,18 +868,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('currencySelect').addEventListener('change', e => {
     state.currency = e.target.value;
     persistState();
-    renderPosItems();
-    renderCart();
+    renderCartFull();
   });
 
-  document.getElementById('posSearchInput').addEventListener('input', e => {
-    state.searchQuery = e.target.value;
-    renderPosItems();
-  });
-
-  document.getElementById('discountInput').addEventListener('input', renderCart);
-  document.getElementById('taxInput').addEventListener('input', renderCart);
-  document.getElementById('hideTaxCheckbox').addEventListener('change', renderCart);
+  document.getElementById('discountInput').addEventListener('input', renderCartFull);
+  document.getElementById('taxInput').addEventListener('input', renderCartFull);
+  document.getElementById('hideTaxCheckbox').addEventListener('change', renderCartFull);
 
   document.getElementById('saleDateInput').value = todayStr;
   document.getElementById('custodyDateInput').value = todayStr;
@@ -997,9 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('printReportBtn').addEventListener('click', () => window.print());
 
   applyTranslations();
-  renderCategoryStrip();
-  renderPosItems();
-  renderCart();
+  renderCartFull();
   renderReports();
 });
 </script>
@@ -1017,47 +901,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
   const posCloudDb = firebase.database();
-
-  function playHighAlertSound() {
-    try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(950, audioCtx.currentTime);
-      gainNode.gain.setValueAtTime(0.7, audioCtx.currentTime);
-      osc.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.6);
-    } catch (e) { console.log('Audio error'); }
-  }
-
-  // الاستماع اللحظي للطلبات الواردة وتصحيح الإجمالي وتنبيه الكاشير
-  posCloudDb.ref('pendingOrders').on('child_added', (snapshot) => {
-    const newOrder = snapshot.val();
-    if (newOrder && newOrder.status === 'pending') {
-      let currentPending = JSON.parse(localStorage.getItem('fp_pending') || '[]');
-      if (!currentPending.some(o => o.id === newOrder.id)) {
-        let rawTotal = newOrder.total;
-        if (typeof rawTotal === 'string') {
-          rawTotal = parseFloat(rawTotal.replace(/[^0-9.]/g, '')) || 0;
-        }
-
-        const normalizedOrder = {
-          ...newOrder,
-          total: rawTotal
-        };
-
-        currentPending.unshift(normalizedOrder);
-        localStorage.setItem('fp_pending', JSON.stringify(currentPending));
-        playHighAlertSound();
-        if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]);
-        if (typeof renderPendingOrders === 'function') { renderPendingOrders(); }
-        alert(`🚨 وصل أوردر جديد عبر الإنترنت من: ${newOrder.customer}`);
-      }
-    }
-  });
 </script>
 </body>
 </html>
