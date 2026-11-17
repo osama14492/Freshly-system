@@ -741,7 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('');
   }
 
-  // دالة سحب الأوردر الوارد للفاتورة الحالية وحذفه من المعلقة والسحابة
+  // دالة سحب الأوردر الوارد لتظهر تفاصيله كاملة في شاشة الكاشير (الفاتورة الحالية)
   window.loadOrderToCart = function(id) {
     let ord = state.pending.find(o => o.id === id);
     let isPending = true;
@@ -751,9 +751,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (!ord || !ord.cart) return;
 
+    // نقل الأصناف والكميات واسم العميل إلى الفاتورة الحالية
     state.cart = ord.cart.map(c => ({ itemId: c.itemId, qty: c.qty }));
     document.getElementById('customerNameInput').value = ord.customer || '';
 
+    // إزالته من القائمة المعلقة والسحابة لكي لا يتكرر
     if (isPending) {
       state.pending = state.pending.filter(o => o.id !== id);
       try {
@@ -769,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPendingOrders();
     renderCart();
     switchTab('pos');
-    alert('📥 تم سحب الأوردر إلى الفاتورة الحالية بنجاح!');
+    alert('📥 تم سحب الأوردر إلى شاشة الكاشير بكامل تفاصيله بنجاح! يمكنك إتمامه أو تعليقه.');
   };
 
   window.processOrder = function(id) {
