@@ -740,6 +740,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('');
   }
 
+  // تم تحديث الدالة لحذف الأوردر نهائياً من سحابة فايربيس لكي لا يعود عند التحديث
   window.processOrder = function(id) {
     let ord = state.pending.find(o => o.id === id);
     let isPending = true;
@@ -758,8 +759,14 @@ document.addEventListener('DOMContentLoaded', () => {
       total: Number(ord.total || 0)
     });
 
-    if (isPending) state.pending = state.pending.filter(o => o.id !== id);
-    else state.held = state.held.filter(o => o.id !== id);
+    if (isPending) {
+      state.pending = state.pending.filter(o => o.id !== id);
+      posCloudDb.ref('pendingOrders').orderByChild('id').equalTo(id).once('child_added', snapshot => {
+        snapshot.ref.remove();
+      });
+    } else {
+      state.held = state.held.filter(o => o.id !== id);
+    }
 
     persistState();
     renderPendingOrders();
@@ -770,6 +777,11 @@ document.addEventListener('DOMContentLoaded', () => {
   window.removeOrder = function(id) {
     state.pending = state.pending.filter(o => o.id !== id);
     state.held = state.held.filter(o => o.id !== id);
+    
+    posCloudDb.ref('pendingOrders').orderByChild('id').equalTo(id).once('child_added', snapshot => {
+      snapshot.ref.remove();
+    });
+
     persistState();
     renderPendingOrders();
   };
@@ -984,7 +996,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { console.log('Audio error'); }
   }
 
-  // الاستماع اللحظي للطلبات الواردة وتحويل الإجمالي لرقم صحيح لتجنب NaN
+  // الاستماع اللحظي للطلبات وتحويل الإجمالي لرقم صحيح لتجنب NaN وتشغيل التنبيه
   posCloudDb.ref('pendingOrders').on('child_added', (snapshot) => {
     const newOrder = snapshot.val();
     if (newOrder && newOrder.status === 'pending') {
