@@ -732,7 +732,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">${ord.customer} (${ord.id})</div>
           <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — إجمالي: ${formatMoney(ord.total || 0)}</div>
         </div>
-        <div style="display:flex; gap:5px;">
+        <div style="display:flex; gap:4px;">
+          <button class="btn btn-dark" style="padding:5px 6px; font-size:0.65rem;" onclick="loadOrderToCart('${ord.id}')" title="سحب للفاتورة الحالية">📥 سحب</button>
           <button class="btn btn-gold" style="padding:5px 8px; font-size:0.7rem;" onclick="processOrder('${ord.id}')">إتمام</button>
           <button class="btn btn-danger" style="padding:5px 8px; font-size:0.7rem;" onclick="removeOrder('${ord.id}')">حذف</button>
         </div>
@@ -740,7 +741,39 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('');
   }
 
-  // تم تحديث الدالة لحذف الأوردر نهائياً من سحابة فايربيس لكي لا يعود عند التحديث
+  // دالة لجلب الأوردر الوارد إلى شاشة الفاتورة الحالية (POS Cart) وحذفه من المعلقة والسحابة
+  window.loadOrderToCart = function(id) {
+    let ord = state.pending.find(o => o.id === id);
+    let isPending = true;
+    if (!ord) {
+      ord = state.held.find(o => o.id === id);
+      isPending = false;
+    }
+    if (!ord || !ord.cart) return;
+
+    // تعبئة السلة بالأصناف
+    state.cart = ord.cart.map(c => ({ itemId: c.itemId, qty: c.qty }));
+    document.getElementById('customerNameInput').value = ord.customer || '';
+
+    // إزالته من القائمة المعلقة المحلية
+    if (isPending) {
+      state.pending = state.pending.filter(o => o.id !== id);
+      try {
+        posCloudDb.ref('pendingOrders').orderByChild('id').equalTo(id).once('value', snapshot => {
+          snapshot.forEach(childSnap => { childSnap.ref.remove(); });
+        });
+      } catch (e) { console.log("Cloud sync note"); }
+    } else {
+      state.held = state.held.filter(o => o.id !== id);
+    }
+
+    persistState();
+    renderPendingOrders();
+    renderCart();
+    switchTab('pos');
+    alert('📥 تم سحب الأوردر إلى الفاتورة الحالية بنجاح!');
+  };
+
   window.processOrder = function(id) {
     let ord = state.pending.find(o => o.id === id);
     let isPending = true;
@@ -761,9 +794,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isPending) {
       state.pending = state.pending.filter(o => o.id !== id);
-      posCloudDb.ref('pendingOrders').orderByChild('id').equalTo(id).once('child_added', snapshot => {
-        snapshot.ref.remove();
-      });
+      try {
+        posCloudDb.ref('pendingOrders').orderByChild('id').equalTo(id).once('value', snapshot => {
+          snapshot.forEach(childSnap => { childSnap.ref.remove(); });
+        });
+      } catch (e) { console.log("Cloud sync note"); }
     } else {
       state.held = state.held.filter(o => o.id !== id);
     }
@@ -778,9 +813,11 @@ document.addEventListener('DOMContentLoaded', () => {
     state.pending = state.pending.filter(o => o.id !== id);
     state.held = state.held.filter(o => o.id !== id);
     
-    posCloudDb.ref('pendingOrders').orderByChild('id').equalTo(id).once('child_added', snapshot => {
-      snapshot.ref.remove();
-    });
+    try {
+      posCloudDb.ref('pendingOrders').orderByChild('id').equalTo(id).once('value', snapshot => {
+        snapshot.forEach(childSnap => { childSnap.ref.remove(); });
+      });
+    } catch (e) { console.log("Cloud sync note"); }
 
     persistState();
     renderPendingOrders();
@@ -996,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { console.log('Audio error'); }
   }
 
-  // الاستماع اللحظي للطلبات وتحويل الإجمالي لرقم صحيح لتجنب NaN وتشغيل التنبيه
+  // الاستماع اللحظي للطلبات الواردة وتحويل الإجمالي لرقم صحيح لتجنب NaN وتشغيل التنبيه
   posCloudDb.ref('pendingOrders').on('child_added', (snapshot) => {
     const newOrder = snapshot.val();
     if (newOrder && newOrder.status === 'pending') {
