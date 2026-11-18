@@ -63,7 +63,7 @@
 
   .cart-panel-full { background: var(--bg-panel); border: 1px solid var(--border-gold); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; flex: 1; overflow: hidden; }
   .cart-list-full { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-  .cart-empty { text-align: center; color: var(--text-muted); padding: 25px; font-size: 0.85rem; }
+  .cart-empty { text-align: center; color: var(--text-muted); padding: 15px; font-size: 0.8rem; }
   
   .cart-row-detailed { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; }
   .cart-row-top { display: flex; justify-content: space-between; align-items: center; }
@@ -228,9 +228,12 @@
       </section>
 
       <!-- 2. PENDING ORDERS VIEW -->
-      <section id="view-pending" class="view-section">
-        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;">الأوردرات المعلقة والقادمة من المنيو الإلكتروني (Firebase)</h3>
-        <div id="pendingOrdersList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1;"></div>
+      <section id="view-pending" class="view-section" style="overflow-y: auto;">
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:4px;">📥 الأوردرات القادمة من المنيو الإلكتروني</h3>
+        <div id="menuOrdersList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;"></div>
+
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:4px;">⏳ الأوردرات المعلقة يدوياً</h3>
+        <div id="heldOrdersList" style="display:flex; flex-direction:column; gap:6px;"></div>
       </section>
 
       <!-- 3. REPORTS & CUSTODY VIEW -->
@@ -580,28 +583,50 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function renderHeldOrders() {
-    const container = document.getElementById('pendingOrdersList');
+    const menuContainer = document.getElementById('menuOrdersList');
+    const heldContainer = document.getElementById('heldOrdersList');
     const badge = document.getElementById('pendingBadge');
+    
     badge.textContent = state.held.length;
     badge.style.display = state.held.length > 0 ? 'inline-block' : 'none';
 
-    if (state.held.length === 0) {
-      container.innerHTML = `<div class="cart-empty">لا توجد أوردرات معلقة أو قادمة من المنيو</div>`;
-      return;
+    // فصل الأوردرات الواردة من المنيو (تبدأ بـ WEB) عن الأوردرات المعلقة يدوياً (تبدأ بـ HELD أو غيرها)
+    const menuOrders = state.held.filter(o => String(o.id).startsWith('WEB-'));
+    const heldOrders = state.held.filter(o => !String(o.id).startsWith('WEB-'));
+
+    if (menuOrders.length === 0) {
+      menuContainer.innerHTML = `<div class="cart-empty" style="padding:10px;">لا توجد أوردرات قادمة من المنيو</div>`;
+    } else {
+      menuContainer.innerHTML = menuOrders.map(ord => `
+        <div class="panel-box" style="display:flex; justify-content:space-between; align-items:center; padding:8px; margin-bottom:0;">
+          <div>
+            <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">📍 ${ord.customer} (${ord.id})</div>
+            <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — المجموع: ${formatMoney(ord.total || 0)}</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-gold" style="padding:6px 10px; font-size:0.75rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 مراجعة وإتمام</button>
+            <button class="btn btn-danger" style="padding:6px 8px; font-size:0.7rem;" onclick="removeHeld('${ord.id}')">✕</button>
+          </div>
+        </div>
+      `).join('');
     }
 
-    container.innerHTML = state.held.map(ord => `
-      <div class="panel-box" style="display:flex; justify-content:space-between; align-items:center; padding:8px;">
-        <div>
-          <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">📍 ${ord.customer} (${ord.id})</div>
-          <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — المجموع: ${formatMoney(ord.total || 0)}</div>
+    if (heldOrders.length === 0) {
+      heldContainer.innerHTML = `<div class="cart-empty" style="padding:10px;">لا توجد أوردرات معلقة يدوياً</div>`;
+    } else {
+      heldContainer.innerHTML = heldOrders.map(ord => `
+        <div class="panel-box" style="display:flex; justify-content:space-between; align-items:center; padding:8px; margin-bottom:0;">
+          <div>
+            <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">📍 ${ord.customer} (${ord.id})</div>
+            <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — المجموع: ${formatMoney(ord.total || 0)}</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-gold" style="padding:6px 10px; font-size:0.75rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 مراجعة وإتمام</button>
+            <button class="btn btn-danger" style="padding:6px 8px; font-size:0.7rem;" onclick="removeHeld('${ord.id}')">✕</button>
+          </div>
         </div>
-        <div style="display:flex; gap:4px;">
-          <button class="btn btn-gold" style="padding:6px 10px; font-size:0.75rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 مراجعة وإتمام</button>
-          <button class="btn btn-danger" style="padding:6px 8px; font-size:0.7rem;" onclick="removeHeld('${ord.id}')">✕</button>
-        </div>
-      </div>
-    `).join('');
+      `).join('');
+    }
   }
 
   window.loadHeldOrderToCart = function(id) {
