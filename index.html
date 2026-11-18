@@ -173,7 +173,6 @@
               <button class="btn btn-dark" style="padding:4px 8px; font-size:0.7rem;" onclick="addItemPrompt()">➕ إضافة صنف</button>
             </div>
 
-            <!-- تم إلغاء نوع الطلب ورقم الهاتف نهائياً بناءً على طلبك -->
             <div class="invoice-meta-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:6px;">
               <div>
                 <label>اسم العميل / الطاولة / الغرفة</label>
@@ -311,7 +310,6 @@
           </table>
         </div>
 
-        <!-- الصافي موجود بوضوح في التقارير بناءً على الفيديو -->
         <div class="panel-box" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; text-align:center;">
           <div>
             <div style="font-size:0.65rem; color:var(--text-muted);">إجمالي المبيعات للفترة</div>
@@ -417,22 +415,31 @@ document.addEventListener('DOMContentLoaded', () => {
     return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
   }
 
-  // **ربط واستقبال الأوردرات من المنيو الإلكتروني عبر Firebase**
-  rtdb.ref('orders').on('child_added', (snapshot) => {
+  // **تم تعديل الاستماع ليتطابق بدقة مع جذر قاعدة البيانات (Root) حيث يتم حفظ الأوردرات برقم الأوردر مباشرة**
+  rtdb.ref('/').on('child_added', (snapshot) => {
     const onlineOrder = snapshot.val();
-    if (onlineOrder && !state.held.some(o => o.id === onlineOrder.id)) {
-      state.held.unshift({
-        id: onlineOrder.id || ('WEB-' + Math.floor(100 + Math.random() * 900)),
-        customer: onlineOrder.customer || 'طلب من المنيو الإلكتروني',
-        date: onlineOrder.date || todayStr,
-        currency: onlineOrder.currency || 'EGP',
-        cart: onlineOrder.cart || [],
-        total: onlineOrder.total || 0,
-        paymentMethod: onlineOrder.paymentMethod || 'كاش'
-      });
-      persistState();
-      renderHeldOrders();
-      alert('🚨 وصل أوردر جديد من المنيو عبر الإنترنت وتم إضافته للأوردرات المعلقة!');
+    // التحقق من أن العضوة عبارة عن أوردر يحتوي على رقم وسلة تسوق
+    if (onlineOrder && onlineOrder.id && onlineOrder.cart) {
+      if (!state.held.some(o => o.id === onlineOrder.id)) {
+        // تنظيف القيمة النصية للإجمالي وتحويلها لرقم
+        let rawTotal = onlineOrder.total || 0;
+        if (typeof rawTotal === 'string') {
+          rawTotal = Number(rawTotal.replace(/[^0-9.]/g, '')) || 0;
+        }
+
+        state.held.unshift({
+          id: onlineOrder.id,
+          customer: onlineOrder.customer || 'طلب من المنيو الإلكتروني',
+          date: onlineOrder.date || todayStr,
+          currency: 'EGP',
+          cart: onlineOrder.cart || [],
+          total: rawTotal,
+          paymentMethod: 'كاش'
+        });
+        persistState();
+        renderHeldOrders();
+        alert('🚨 وصل أوردر جديد من المنيو عبر الإنترنت (' + onlineOrder.id + ') وتم إضافته للأوردرات المعلقة بنجاح!');
+      }
     }
   });
 
@@ -554,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="panel-box" style="display:flex; justify-content:space-between; align-items:center; padding:8px;">
         <div>
           <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">📍 ${ord.customer} (${ord.id})</div>
-          <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date}</div>
+          <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — المجموع: ${formatMoney(ord.total || 0)}</div>
         </div>
         <div style="display:flex; gap:4px;">
           <button class="btn btn-gold" style="padding:6px 10px; font-size:0.75rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 مراجعة وإتمام</button>
@@ -583,7 +590,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHeldOrders();
   };
 
-  // **تطوير التقارير المالية المتكاملة (يومي، أسبوعي، شهري، مخصص، مع الصافي)**
   function renderReports() {
     const period = document.getElementById('reportPeriodSelect').value;
     const customBox = document.getElementById('customDateRangeBox');
