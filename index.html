@@ -169,30 +169,15 @@
         <div class="pos-container">
           <div class="cart-panel-full">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <span style="font-size:0.88rem; font-weight:900; color:var(--gold-main);" data-i18n="cartTitle">تفاصيل الفاتورة الشاملة</span>
+              <span style="font-size:0.88rem; font-weight:900; color:var(--gold-main);">تفاصيل الفاتورة الشاملة</span>
               <button class="btn btn-dark" style="padding:4px 8px; font-size:0.7rem;" onclick="addItemPrompt()">➕ إضافة صنف</button>
             </div>
 
-            <div class="invoice-meta-grid">
+            <!-- تم إلغاء نوع الطلب ورقم الهاتف نهائياً بناءً على طلبك -->
+            <div class="invoice-meta-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:6px;">
               <div>
                 <label>اسم العميل / الطاولة / الغرفة</label>
                 <input type="text" id="customerNameInput" class="input-field" placeholder="مثال: غرفة 302 أو الطاولة 4">
-              </div>
-              <div>
-                <label>نوع الطلب</label>
-                <select id="orderTypeSelect" class="input-field" style="padding:7px 5px;">
-                  <option value="صالة">🍽️ صالة (Dining)</option>
-                  <option value="تيك أواي">🛍️ تيك أواي (Takeaway)</option>
-                  <option value="خدمة غرف">🛏️ خدمة غرف (Room Service)</option>
-                  <option value="دليفري">🛵 دليفري (Delivery)</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="invoice-meta-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom:6px;">
-              <div>
-                <label>رقم الهاتف</label>
-                <input type="text" id="customerPhoneInput" class="input-field" placeholder="رقم الموبايل">
               </div>
               <div>
                 <label>طريقة الدفع</label>
@@ -203,10 +188,11 @@
                   <option value="على الغرفة">🏨 تسجيل على الغرفة</option>
                 </select>
               </div>
-              <div>
-                <label>التاريخ</label>
-                <input type="date" id="saleDateInput" class="input-field">
-              </div>
+            </div>
+
+            <div style="margin-bottom: 6px;">
+              <label style="font-size:0.62rem; color:var(--text-muted); display:block; margin-bottom:2px;">التاريخ</label>
+              <input type="date" id="saleDateInput" class="input-field">
             </div>
 
             <div id="cartItemsListFull" class="cart-list-full"></div>
@@ -244,29 +230,97 @@
 
       <!-- 2. PENDING ORDERS VIEW -->
       <section id="view-pending" class="view-section">
-        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;">الأوردرات المعلقة والقادمة من الإنترنت (المنيو)</h3>
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;">الأوردرات المعلقة والقادمة من المنيو الإلكتروني (Firebase)</h3>
         <div id="pendingOrdersList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1;"></div>
       </section>
 
-      <!-- 3. REPORTS VIEW -->
+      <!-- 3. REPORTS & CUSTODY VIEW -->
       <section id="view-reports" class="view-section">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <h3 style="font-size:0.92rem; color:var(--gold-main);">التقارير اليومية والعهدة</h3>
-          <button id="printReportBtn" class="btn btn-gold no-print" style="padding:4px 8px; font-size:0.7rem;">🖨️ طباعة التقرير</button>
+          <h3 style="font-size:0.92rem; color:var(--gold-main);">التقارير اليومية، الأسبوعية، الشهرية والمخصصة</h3>
+          <div style="display:flex; gap:4px; align-items:center;">
+            <select id="reportPeriodSelect" class="input-field" style="padding:4px 6px; font-size:0.68rem; font-weight:700;">
+              <option value="today">⭐ اليوم فقط</option>
+              <option value="7days">⚡ آخر 7 أيام (أسبوعي)</option>
+              <option value="30days">📊 آخر 30 يوم (شهري)</option>
+              <option value="all">📅 كل الأيام</option>
+              <option value="custom">🎯 فترة محددة (من - إلى)</option>
+            </select>
+            <button id="printReportBtn" class="btn btn-gold no-print" style="padding:4px 6px; font-size:0.68rem;">🖨️</button>
+          </div>
         </div>
+
+        <div id="customDateRangeBox" class="panel-box" style="display:none; grid-template-columns: 1fr 1fr; gap:6px; padding:6px 10px;">
+          <div>
+            <label style="font-size:0.6rem; color:var(--text-muted);">من تاريخ</label>
+            <input type="date" id="customStartDate" class="input-field" style="padding:4px 6px; font-size:0.75rem;">
+          </div>
+          <div>
+            <label style="font-size:0.6rem; color:var(--text-muted);">إلى تاريخ</label>
+            <input type="date" id="customEndDate" class="input-field" style="padding:4px 6px; font-size:0.75rem;">
+          </div>
+        </div>
+
         <div class="panel-box" style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px;">
           <span style="font-size:0.72rem; font-weight:800; color:var(--gold-light);">سعر صرف اليورو (EUR to EGP):</span>
           <input type="number" id="exchangeRateInput" class="input-field" value="55" step="0.1" style="max-width:80px; text-align:center;">
         </div>
+
+        <div class="panel-box">
+          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;">إدارة العهدة اليومية للدرج</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:6px; align-items:flex-end;">
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);">التاريخ</label>
+              <input type="date" id="custodyDateInput" class="input-field">
+            </div>
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);">المبلغ (EGP)</label>
+              <input type="number" id="custodyAmountInput" class="input-field">
+            </div>
+            <button id="saveCustodyBtn" class="btn btn-gold" style="padding:7px 10px;">حفظ</button>
+          </div>
+        </div>
+
+        <div class="panel-box">
+          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;">تسجيل المصروفات اليومية</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr auto; gap:5px; align-items:flex-end;">
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);">التاريخ</label>
+              <input type="date" id="expenseDateInput" class="input-field">
+            </div>
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);">المبلغ</label>
+              <input type="number" id="expenseAmountInput" class="input-field">
+            </div>
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);">البيان / السبب</label>
+              <input type="text" id="expenseDescInput" class="input-field" placeholder="مثل: مشتريات ثلج">
+            </div>
+            <button id="addExpenseBtn" class="btn btn-gold" style="padding:7px 10px;">إضافة</button>
+          </div>
+        </div>
+
         <div class="panel-box" style="flex:1; overflow-y:auto;">
-          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;">ملخص الأيام المالي</h4>
+          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;">ملخص الفترة المالي</h4>
           <table class="data-table">
             <thead>
-              <tr><th>التاريخ</th><th>الطلبات</th><th>العهدة</th><th>المصروفات</th><th>إجمالي المبيعات</th></tr>
+              <tr><th>التاريخ</th><th>الطلبات</th><th>العهدة</th><th>المصروفات</th><th>المبيعات</th></tr>
             </thead>
             <tbody id="dailyBreakdownBody"></tbody>
             <tfoot id="dailyBreakdownFoot"></tfoot>
           </table>
+        </div>
+
+        <!-- الصافي موجود بوضوح في التقارير بناءً على الفيديو -->
+        <div class="panel-box" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; text-align:center;">
+          <div>
+            <div style="font-size:0.65rem; color:var(--text-muted);">إجمالي المبيعات للفترة</div>
+            <div id="statTotalSalesVal" style="font-size:0.95rem; font-weight:900; color:var(--gold-main);">0 EGP</div>
+          </div>
+          <div>
+            <div style="font-size:0.65rem; color:var(--text-muted);">الصافي بالدرج (الخزينة)</div>
+            <div id="statNetDrawerVal" style="font-size:0.95rem; font-weight:900; color:var(--success);">0 EGP</div>
+          </div>
         </div>
       </section>
 
@@ -300,7 +354,7 @@
   </div>
 
 <script>
-  // تهيئة Firebase Realtime Database
+  // تهيئة Firebase Realtime Database للربط بالمنيو الإلكتروني
   const firebaseConfig = {
     apiKey: "AIzaSyBMH6XnDvVz...",
     authDomain: "freshly-pos.firebaseapp.com",
@@ -331,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sales: JSON.parse(localStorage.getItem('fp_sales_v3') || '[]'),
       held: JSON.parse(localStorage.getItem('fp_held_v3') || '[]'),
       custodyByDate: JSON.parse(localStorage.getItem('fp_custody_v3') || JSON.stringify({ [todayStr]: 1000 })),
+      expensesByDate: JSON.parse(localStorage.getItem('fp_expenses_v3') || '{}'),
       cart: []
     };
   }
@@ -342,6 +397,8 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('fp_currency', state.currency);
     localStorage.setItem('fp_sales_v3', JSON.stringify(state.sales));
     localStorage.setItem('fp_held_v3', JSON.stringify(state.held));
+    localStorage.setItem('fp_custody_v3', JSON.stringify(state.custodyByDate));
+    localStorage.setItem('fp_expenses_v3', JSON.stringify(state.expensesByDate));
   }
 
   function formatMoney(amount) {
@@ -360,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
   }
 
-  // **الاستماع للأوردرات القادمة من الإنترنت (Firebase Realtime Database)**
+  // **ربط واستقبال الأوردرات من المنيو الإلكتروني عبر Firebase**
   rtdb.ref('orders').on('child_added', (snapshot) => {
     const onlineOrder = snapshot.val();
     if (onlineOrder && !state.held.some(o => o.id === onlineOrder.id)) {
@@ -371,7 +428,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currency: onlineOrder.currency || 'EGP',
         cart: onlineOrder.cart || [],
         total: onlineOrder.total || 0,
-        orderType: onlineOrder.orderType || 'صالة',
         paymentMethod: onlineOrder.paymentMethod || 'كاش'
       });
       persistState();
@@ -464,6 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.cart = [];
     document.getElementById('customerNameInput').value = '';
     renderCartFull();
+    renderReports();
   });
 
   document.getElementById('holdOrderBtn').addEventListener('click', () => {
@@ -489,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
     badge.style.display = state.held.length > 0 ? 'inline-block' : 'none';
 
     if (state.held.length === 0) {
-      container.innerHTML = `<div class="cart-empty">لا توجد أوردرات معلقة</div>`;
+      container.innerHTML = `<div class="cart-empty">لا توجد أوردرات معلقة أو قادمة من المنيو</div>`;
       return;
     }
 
@@ -526,6 +583,105 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHeldOrders();
   };
 
+  // **تطوير التقارير المالية المتكاملة (يومي، أسبوعي، شهري، مخصص، مع الصافي)**
+  function renderReports() {
+    const period = document.getElementById('reportPeriodSelect').value;
+    const customBox = document.getElementById('customDateRangeBox');
+    const now = new Date();
+    
+    customBox.style.display = period === 'custom' ? 'grid' : 'none';
+
+    const dateSet = new Set();
+    state.sales.forEach(s => dateSet.add(s.date));
+    Object.keys(state.custodyByDate).forEach(d => dateSet.add(d));
+    Object.keys(state.expensesByDate).forEach(d => dateSet.add(d));
+    
+    let dates = Array.from(dateSet).sort().reverse();
+
+    if (period === 'today') {
+      dates = dates.filter(d => d === todayStr);
+    } else if (period === '7days') {
+      const limit = new Date(); limit.setDate(now.getDate() - 7);
+      dates = dates.filter(d => new Date(d) >= limit);
+    } else if (period === '30days') {
+      const limit = new Date(); limit.setDate(now.getDate() - 30);
+      dates = dates.filter(d => new Date(d) >= limit);
+    } else if (period === 'custom') {
+      const start = document.getElementById('customStartDate').value;
+      const end = document.getElementById('customEndDate').value;
+      if (start) dates = dates.filter(d => d >= start);
+      if (end) dates = dates.filter(d => d <= end);
+    }
+
+    let sumCustody = 0;
+    let sumExpenses = 0;
+    let sumSales = 0;
+    let totalOrders = 0;
+
+    const tbody = document.getElementById('dailyBreakdownBody');
+    tbody.innerHTML = dates.map(d => {
+      const daySales = state.sales.filter(s => s.date === d);
+      const dayTotal = daySales.reduce((a, b) => a + Number(b.total), 0);
+      const cust = Number(state.custodyByDate[d] || 0);
+      const expList = state.expensesByDate[d] || [];
+      const dayExp = expList.reduce((a, b) => a + Number(b.amount), 0);
+
+      sumCustody += cust;
+      sumExpenses += dayExp;
+      sumSales += dayTotal;
+      totalOrders += daySales.length;
+
+      return `
+        <tr>
+          <td style="font-weight:700;">${d}</td>
+          <td>${daySales.length}</td>
+          <td>${cust}</td>
+          <td style="color:var(--danger);">${dayExp}</td>
+          <td style="color:var(--gold-main); font-weight:800;">${dayTotal.toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    document.getElementById('dailyBreakdownFoot').innerHTML = `
+      <tr style="background:rgba(212,175,55,0.16); font-weight:900;">
+        <td>الإجمالي</td>
+        <td>${totalOrders}</td>
+        <td>${sumCustody}</td>
+        <td style="color:var(--danger);">${sumExpenses}</td>
+        <td style="color:var(--gold-main);">${sumSales.toFixed(2)}</td>
+      </tr>
+    `;
+
+    document.getElementById('statTotalSalesVal').textContent = `${sumSales.toFixed(2)} EGP`;
+    document.getElementById('statNetDrawerVal').textContent = `${(sumCustody + sumSales - sumExpenses).toFixed(2)} EGP`;
+  }
+
+  document.getElementById('reportPeriodSelect').addEventListener('change', renderReports);
+  document.getElementById('customStartDate').addEventListener('change', renderReports);
+  document.getElementById('customEndDate').addEventListener('change', renderReports);
+
+  document.getElementById('saveCustodyBtn').addEventListener('click', () => {
+    const d = document.getElementById('custodyDateInput').value || todayStr;
+    state.custodyByDate[d] = Number(document.getElementById('custodyAmountInput').value || 0);
+    persistState();
+    renderReports();
+    alert('تم حفظ العهدة بنجاح ✅');
+  });
+
+  document.getElementById('addExpenseBtn').addEventListener('click', () => {
+    const d = document.getElementById('expenseDateInput').value || todayStr;
+    const amount = Number(document.getElementById('expenseAmountInput').value || 0);
+    const desc = document.getElementById('expenseDescInput').value.trim() || 'مصروف';
+    if (amount <= 0) return alert('أدخل مبلغ صحيح');
+    if (!state.expensesByDate[d]) state.expensesByDate[d] = [];
+    state.expensesByDate[d].push({ amount, desc });
+    persistState();
+    renderReports();
+    document.getElementById('expenseAmountInput').value = '';
+    document.getElementById('expenseDescInput').value = '';
+    alert('تم تسجيل المصروف بنجاح 💸');
+  });
+
   function showReceiptModal(sale) {
     const modal = document.getElementById('receiptModal');
     const area = document.getElementById('receiptPrintArea');
@@ -549,6 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === name));
     document.querySelectorAll('.view-section').forEach(s => s.classList.toggle('active', s.id === `view-${name}`));
     if (name === 'pending') renderHeldOrders();
+    if (name === 'reports') renderReports();
   }
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -557,6 +714,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('saleDateInput').value = todayStr;
+  document.getElementById('custodyDateInput').value = todayStr;
+  document.getElementById('expenseDateInput').value = todayStr;
+  document.getElementById('customStartDate').value = todayStr;
+  document.getElementById('customEndDate').value = todayStr;
+
   renderCartFull();
   renderHeldOrders();
 });
