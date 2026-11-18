@@ -113,6 +113,9 @@
 </head>
 <body>
 
+  <!-- عنصر الصوت للتنبيه (قابل للتغيير لاحقاً برابط ملف صوتي آخر) -->
+  <audio id="orderAlertSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
   <div class="phone-frame">
     <div id="toastBanner" class="toast-banner"><span id="toastText">تم التنفيذ بنجاح!</span></div>
 
@@ -418,6 +421,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
   }
 
+  // **تشغيل صوت التنبيه عند وصول أوردر جديد**
+  function playAlertSound() {
+    const sound = document.getElementById('orderAlertSound');
+    if (sound) {
+      sound.currentTime = 0;
+      sound.play().catch(e => console.log("Audio play blocked by browser policy until user interaction"));
+    }
+  }
+
   // **استماع وتحديث فوري للأوردرات القادمة من مجلد pendingOrders في قاعدة البيانات**
   rtdb.ref('pendingOrders').on('child_added', (snapshot) => {
     const onlineOrder = snapshot.val();
@@ -440,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         persistState();
         renderHeldOrders();
+        playAlertSound();
         alert('🚨 وصل أوردر جديد من المنيو (' + orderId + ') وتم إضافته للأوردرات المعلقة بنجاح!');
       }
     }
@@ -590,7 +603,6 @@ document.addEventListener('DOMContentLoaded', () => {
     badge.textContent = state.held.length;
     badge.style.display = state.held.length > 0 ? 'inline-block' : 'none';
 
-    // فصل الأوردرات الواردة من المنيو (تبدأ بـ WEB) عن الأوردرات المعلقة يدوياً (تبدأ بـ HELD أو غيرها)
     const menuOrders = state.held.filter(o => String(o.id).startsWith('WEB-'));
     const heldOrders = state.held.filter(o => !String(o.id).startsWith('WEB-'));
 
@@ -633,6 +645,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const ord = state.held.find(o => o.id === id);
     if (!ord) return;
 
+    // إذا كان الأوردر قادماً من المنيو الإلكتروني، يتم حذفه تلقائياً من قاعدة بيانات Firebase
+    if (String(id).startsWith('WEB-')) {
+      rtdb.ref('pendingOrders/' + id).remove().catch(err => {
+        console.error("Error removing order from Firebase:", err);
+      });
+    }
+
     state.cart = (ord.cart || []).map(c => ({
       itemId: c.itemId || c.id,
       id: c.id || c.itemId,
@@ -661,10 +680,16 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHeldOrders();
     renderCartFull();
     switchTab('pos');
-    alert('📥 تم سحب الأوردر رقم (' + ord.id + ') بكافة تفاصيله وأصنافه إلى شاشة الكاشير بنجاح!');
+    alert('📥 تم سحب الأوردر رقم (' + ord.id + ') وحذفه من قاعدة البيانات، وتم نقله لشاشة الكاشير بنجاح!');
   };
 
   window.removeHeld = function(id) {
+    // إذا قام بحذفه يدوياً من زر ✕ لأوردر قادم من المنيو، يتم حذفه من قاعدة البيانات أيضاً
+    if (String(id).startsWith('WEB-')) {
+      rtdb.ref('pendingOrders/' + id).remove().catch(err => {
+        console.error("Error removing order from Firebase:", err);
+      });
+    }
     state.held = state.held.filter(o => o.id !== id);
     persistState();
     renderHeldOrders();
