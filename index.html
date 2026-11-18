@@ -415,10 +415,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
   }
 
-  // **استماع وتحديث فوري للأوردرات القادمة من قاعدة البيانات برقم الأوردر المباشر**
-  rtdb.ref('/').on('child_added', (snapshot) => {
+    // **استماع وتحديث فوري للأوردرات القادمة من مجلد pendingOrders في قاعدة البيانات**
+  rtdb.ref('pendingOrders').on('child_added', (snapshot) => {
     const onlineOrder = snapshot.val();
-    if (onlineOrder && onlineOrder.cart) {
+    if (onlineOrder) {
       const orderId = onlineOrder.id || snapshot.key;
       if (!state.held.some(o => o.id === orderId)) {
         let rawTotal = onlineOrder.total || 0;
@@ -433,14 +433,45 @@ document.addEventListener('DOMContentLoaded', () => {
           currency: 'EGP',
           cart: onlineOrder.cart || [],
           total: rawTotal,
-          paymentMethod: 'كاش'
+          paymentMethod: onlineOrder.paymentMethod || 'كاش'
         });
         persistState();
         renderHeldOrders();
-        alert('🚨 وصل أوردر جديد من المنيو عبر الإنترنت (' + orderId + ') وتم إضافته للأوردرات المعلقة بنجاح!');
+        alert('🚨 وصل أوردر جديد من المنيو (' + orderId + ') وتم إضافته للأوردرات المعلقة بنجاح!');
       }
     }
   });
+
+  // جلب الأوردرات المعلقة الموجودة مسبقاً داخل مجلد pendingOrders عند فتح التطبيق
+  rtdb.ref('pendingOrders').once('value', (snapshot) => {
+    const allOrders = snapshot.val();
+    if (allOrders) {
+      Object.keys(allOrders).forEach(key => {
+        const onlineOrder = allOrders[key];
+        if (onlineOrder) {
+          const orderId = onlineOrder.id || key;
+          if (!state.held.some(o => o.id === orderId) && !state.sales.some(s => s.id === orderId)) {
+            let rawTotal = onlineOrder.total || 0;
+            if (typeof rawTotal === 'string') {
+              rawTotal = Number(rawTotal.replace(/[^0-9.]/g, '')) || 0;
+            }
+            state.held.unshift({
+              id: orderId,
+              customer: onlineOrder.customer || 'طلب من المنيو الإلكتروني',
+              date: onlineOrder.date || todayStr,
+              currency: 'EGP',
+              cart: onlineOrder.cart || [],
+              total: rawTotal,
+              paymentMethod: onlineOrder.paymentMethod || 'كاش'
+            });
+          }
+        }
+      });
+      persistState();
+      renderHeldOrders();
+    }
+  });
+
 
   // التحقق الفوري من الأوردرات الموجودة مسبقاً عند فتح التطبيق
   rtdb.ref('/').once('value', (snapshot) => {
@@ -482,7 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCartFull();
   };
 
-  function renderCartFull() {
+    function renderCartFull() {
     const list = document.getElementById('cartItemsListFull');
     if (state.cart.length === 0) {
       list.innerHTML = `<div class="cart-empty">الفاتورة فارغة</div>`;
@@ -492,15 +523,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let subtotal = 0;
     list.innerHTML = state.cart.map((c, idx) => {
-      const item = state.items.find(i => i.id === c.itemId);
-      if (!item) return '';
-      const unit = getUnitPrice(item);
+      // البحث عن الصنف محلياً أو الاعتماد على الاسم والسعر القادمين من المنيو مباشرة
+      const item = state.items.find(i => i.id === c.itemId || i.id === c.id);
+      const title = item ? getItemTitle(item) : (c.name || 'صنف من المنيو');
+      const unit = item ? getUnitPrice(item) : Number(c.price || 0);
       subtotal += unit * c.qty;
 
       return `
         <div class="cart-row-detailed">
           <div class="cart-row-top">
-            <span class="cart-item-name">${getItemTitle(item)}</span>
+            <span class="cart-item-name">${title}</span>
             <button class="btn btn-danger" style="padding:1px 5px; font-size:0.6rem;" onclick="state.cart.splice(${idx},1); renderCartFull();">✕</button>
           </div>
           <div class="item-options-grid">
@@ -536,81 +568,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('grandTotalDisplay').textContent = formatMoney(total);
   }
 
-  document.getElementById('checkoutBtn').addEventListener('click', () => {
-    if (state.cart.length === 0) return alert('الفاتورة فارغة');
-    const customer = document.getElementById('customerNameInput').value.trim() || 'كاشير عام';
-    let subtotal = 0;
-    state.cart.forEach(c => subtotal += getUnitPrice(state.items.find(i => i.id === c.itemId)) * c.qty);
-
-    const sale = {
-      id: 'SALE-' + Math.floor(1000 + Math.random() * 9000),
-      customer,
-      date: document.getElementById('saleDateInput').value || todayStr,
-      cart: [...state.cart],
-      total
-    };
-
-    state.sales.unshift(sale);
-    persistState();
-    showReceiptModal(sale);
-    state.cart = [];
-    document.getElementById('customerNameInput').value = '';
-    renderCartFull();
-    renderReports();
-  });
-
-  document.getElementById('holdOrderBtn').addEventListener('click', () => {
-    if (state.cart.length === 0) return alert('الفاتورة فارغة');
-    state.held.unshift({
-      id: 'HELD-' + Math.floor(100 + Math.random() * 900),
-      customer: document.getElementById('customerNameInput').value.trim() || 'معلق',
-      date: todayStr,
-      cart: [...state.cart],
-      total: 0
-    });
-    persistState();
-    state.cart = [];
-    renderCartFull();
-    renderHeldOrders();
-    alert('تم تعليق الأوردر بنجاح ⏳');
-  });
-
-  function renderHeldOrders() {
-    const container = document.getElementById('pendingOrdersList');
-    const badge = document.getElementById('pendingBadge');
-    badge.textContent = state.held.length;
-    badge.style.display = state.held.length > 0 ? 'inline-block' : 'none';
-
-    if (state.held.length === 0) {
-      container.innerHTML = `<div class="cart-empty">لا توجد أوردرات معلقة أو قادمة من المنيو</div>`;
-      return;
-    }
-
-    container.innerHTML = state.held.map(ord => `
-      <div class="panel-box" style="display:flex; justify-content:space-between; align-items:center; padding:8px;">
-        <div>
-          <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">📍 ${ord.customer} (${ord.id})</div>
-          <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — المجموع: ${formatMoney(ord.total || 0)}</div>
-        </div>
-        <div style="display:flex; gap:4px;">
-          <button class="btn btn-gold" style="padding:6px 10px; font-size:0.75rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 مراجعة وإتمام</button>
-          <button class="btn btn-danger" style="padding:6px 8px; font-size:0.7rem;" onclick="removeHeld('${ord.id}')">✕</button>
-        </div>
-      </div>
-    `).join('');
-  }
-
   window.loadHeldOrderToCart = function(id) {
     const ord = state.held.find(o => o.id === id);
     if (!ord) return;
-    state.cart = ord.cart.map(c => ({ ...c }));
-    document.getElementById('customerNameInput').value = ord.customer;
+
+    // سحب سلة الأصناف بكل تفاصيلها وأسعارها وأسمائها الواردة من المنيو الإلكتروني
+    state.cart = (ord.cart || []).map(c => ({
+      itemId: c.itemId || c.id,
+      id: c.id || c.itemId,
+      name: c.name || '',
+      qty: Number(c.qty || 1),
+      size: c.size || 'كبير',
+      sugar: c.sugar || 'عادي',
+      ice: c.ice || 'وسط',
+      price: Number(c.price || 0),
+      note: c.note || ''
+    }));
+
+    if (ord.customer) {
+      document.getElementById('customerNameInput').value = ord.customer;
+    }
+
+    if (ord.paymentMethod) {
+      const paySelect = document.getElementById('paymentMethodSelect');
+      if (paySelect) {
+        paySelect.value = ord.paymentMethod;
+      }
+    }
+
     state.held = state.held.filter(o => o.id !== id);
     persistState();
     renderHeldOrders();
     renderCartFull();
     switchTab('pos');
-    alert('📥 تم سحب الأوردر إلى شاشة الكاشير لمراجعته والقرار بشأنه!');
+    alert('📥 تم سحب الأوردر رقم (' + ord.id + ') بكافة تفاصيله وأصنافه إلى شاشة الكاشير بنجاح!');
   };
 
   window.removeHeld = function(id) {
