@@ -6,6 +6,9 @@
 <link rel="manifest" href="manifest.json">
 <title>FRESHLY & PREMIER - POS Cashier</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Firebase App & Database SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <style>
   :root {
     --bg-dark: #0c0e13;
@@ -58,7 +61,6 @@
   .input-field { width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 7px 10px; border-radius: 9px; font-size: 0.82rem; outline: none; }
   .input-field:focus { border-color: var(--gold-main); }
 
-  /* لوحة الفاتورة الشاملة وخانات تفاصيل المشروب الفردية */
   .cart-panel-full { background: var(--bg-panel); border: 1px solid var(--border-gold); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; flex: 1; overflow: hidden; }
   .cart-list-full { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
   .cart-empty { text-align: center; color: var(--text-muted); padding: 25px; font-size: 0.85rem; }
@@ -66,9 +68,7 @@
   .cart-row-detailed { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; }
   .cart-row-top { display: flex; justify-content: space-between; align-items: center; }
   .cart-item-name { font-weight: 800; color: var(--text-main); font-size: 0.82rem; }
-  .cart-item-cat { font-size: 0.65rem; color: var(--gold-light); background: rgba(212,175,55,0.12); padding: 1px 6px; border-radius: 4px; }
   
-  /* خانات تفاصيل المشروب داخل الفاتورة */
   .item-options-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--bg-input); padding: 6px; border-radius: 8px; border: 1px solid var(--border-subtle); }
   .item-options-grid select, .item-options-grid input { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle); padding: 3px 5px; font-size: 0.68rem; border-radius: 6px; outline: none; }
 
@@ -100,7 +100,6 @@
   .data-table th, .data-table td { padding: 6px; border-bottom: 1px solid var(--border-subtle); }
   .data-table th { color: var(--gold-light); font-weight: 800; }
 
-  /* نافذة المعاينة والطباعة المخصصة */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; padding: 15px; }
   .modal-content { background: var(--bg-panel); border: 1px solid var(--border-gold); border-radius: 16px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
   
@@ -117,7 +116,7 @@
   <div class="phone-frame">
     <div id="toastBanner" class="toast-banner"><span id="toastText">تم التنفيذ بنجاح!</span></div>
 
-    <!-- نافذة منبثقة لمعاينة الفاتورة وطباعتها وإرسالها -->
+    <!-- نافذة المعاينة والطباعة -->
     <div id="receiptModal" class="modal-overlay">
       <div class="modal-content">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -165,7 +164,7 @@
     <!-- Main Workspace -->
     <main class="main-content">
 
-      <!-- 1. POS VIEW (شاشة الكاشير والفاتورة الشاملة) -->
+      <!-- 1. POS VIEW -->
       <section id="view-pos" class="view-section active">
         <div class="pos-container">
           <div class="cart-panel-full">
@@ -174,7 +173,6 @@
               <button class="btn btn-dark" style="padding:4px 8px; font-size:0.7rem;" onclick="addItemPrompt()">➕ إضافة صنف</button>
             </div>
 
-            <!-- خانات بيانات الفاتورة المتقدمة -->
             <div class="invoice-meta-grid">
               <div>
                 <label>اسم العميل / الطاولة / الغرفة</label>
@@ -215,12 +213,12 @@
 
             <div class="cart-extras">
               <div>
-                <label data-i18n="discountLabel">الخصم (%)</label>
+                <label>الخصم (%)</label>
                 <input type="number" id="discountInput" class="input-field" min="0" max="100" value="0">
               </div>
               <div>
                 <label style="display:flex; justify-content:space-between;">
-                  <span data-i18n="taxLabel">الضريبة (%)</span>
+                  <span>الضريبة (%)</span>
                   <span><input type="checkbox" id="hideTaxCheckbox"> 👁️</span>
                 </label>
                 <input type="number" id="taxInput" class="input-field" min="0" max="100" value="0">
@@ -232,90 +230,49 @@
             </div>
 
             <div class="totals-row">
-              <span data-i18n="grandTotalLabel">الإجمالي النهائي:</span>
+              <span>الإجمالي النهائي:</span>
               <span id="grandTotalDisplay">0 EGP</span>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1.3fr; gap:6px;">
-              <button id="holdOrderBtn" class="btn btn-dark">⏳ <span data-i18n="holdBtn">تعليق الأوردر</span></button>
-              <button id="checkoutBtn" class="btn btn-gold">✅ <span data-i18n="payBtn">إتمام ودفع</span></button>
+              <button id="holdOrderBtn" class="btn btn-dark">⏳ تعليق الأوردر</button>
+              <button id="checkoutBtn" class="btn btn-gold">✅ إتمام ودفع</button>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- 2. PENDING ORDERS VIEW (الأوردرات المعلقة والقادمة من الإنترنت) -->
+      <!-- 2. PENDING ORDERS VIEW -->
       <section id="view-pending" class="view-section">
-        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;" data-i18n="pendingTitle">الأوردرات المعلقة والقادمة من المنيو الإلكتروني</h3>
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;">الأوردرات المعلقة والقادمة من الإنترنت (المنيو)</h3>
         <div id="pendingOrdersList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1;"></div>
       </section>
 
-      <!-- 3. REPORTS & CUSTODY VIEW -->
+      <!-- 3. REPORTS VIEW -->
       <section id="view-reports" class="view-section">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <h3 style="font-size:0.92rem; color:var(--gold-main);" data-i18n="reportsTitle">التقارير اليومية والعهدة</h3>
-          <div style="display:flex; gap:5px; align-items:center;">
-            <select id="reportPeriodSelect" class="input-field" style="padding:4px 8px; font-size:0.7rem; font-weight:700;">
-              <option value="today">⭐ اليوم فقط</option>
-              <option value="all">📅 كل الأيام</option>
-              <option value="7days">⚡ آخر 7 أيام</option>
-            </select>
-            <button id="printReportBtn" class="btn btn-gold no-print" style="padding:4px 8px; font-size:0.7rem;">🖨️</button>
-          </div>
+          <h3 style="font-size:0.92rem; color:var(--gold-main);">التقارير اليومية والعهدة</h3>
+          <button id="printReportBtn" class="btn btn-gold no-print" style="padding:4px 8px; font-size:0.7rem;">🖨️ طباعة التقرير</button>
         </div>
-
         <div class="panel-box" style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px;">
-          <span style="font-size:0.72rem; font-weight:800; color:var(--gold-light);" data-i18n="exchangeRateLabel">سعر صرف اليورو (EUR to EGP):</span>
-          <input type="number" id="exchangeRateInput" class="input-field" value="55" step="0.1" style="max-width:80px; text-align:center; font-weight:850; color:var(--gold-main);">
+          <span style="font-size:0.72rem; font-weight:800; color:var(--gold-light);">سعر صرف اليورو (EUR to EGP):</span>
+          <input type="number" id="exchangeRateInput" class="input-field" value="55" step="0.1" style="max-width:80px; text-align:center;">
         </div>
-
-        <div class="panel-box">
-          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;" data-i18n="custodyBoxTitle">إدارة العهدة اليومية للدرج</h4>
-          <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:6px; align-items:flex-end;">
-            <div>
-              <label style="font-size:0.62rem; color:var(--text-muted);">التاريخ</label>
-              <input type="date" id="custodyDateInput" class="input-field">
-            </div>
-            <div>
-              <label style="font-size:0.62rem; color:var(--text-muted);">المبلغ (EGP)</label>
-              <input type="number" id="custodyAmountInput" class="input-field">
-            </div>
-            <button id="saveCustodyBtn" class="btn btn-gold" style="padding:7px 10px;">حفظ</button>
-          </div>
-        </div>
-
         <div class="panel-box" style="flex:1; overflow-y:auto;">
-          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;" data-i18n="dailyBreakdownTitle">ملخص الأيام المالي</h4>
+          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;">ملخص الأيام المالي</h4>
           <table class="data-table">
             <thead>
-              <tr>
-                <th>التاريخ</th>
-                <th>الطلبات</th>
-                <th>العهدة</th>
-                <th>المصروفات</th>
-                <th>إجمالي المبيعات (EGP)</th>
-              </tr>
+              <tr><th>التاريخ</th><th>الطلبات</th><th>العهدة</th><th>المصروفات</th><th>إجمالي المبيعات</th></tr>
             </thead>
             <tbody id="dailyBreakdownBody"></tbody>
             <tfoot id="dailyBreakdownFoot"></tfoot>
           </table>
         </div>
-
-        <div class="panel-box" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; text-align:center;">
-          <div>
-            <div style="font-size:0.65rem; color:var(--text-muted);">إجمالي المبيعات</div>
-            <div id="statTotalSalesEgpVal" style="font-size:0.95rem; font-weight:900; color:var(--gold-main);">0 EGP</div>
-          </div>
-          <div>
-            <div style="font-size:0.65rem; color:var(--text-muted);">صافي الدرج والخزينة</div>
-            <div id="statNetDrawerVal" style="font-size:0.95rem; font-weight:900; color:var(--success);">0 EGP</div>
-          </div>
-        </div>
       </section>
 
       <!-- 4. SETTINGS VIEW -->
       <section id="view-settings" class="view-section">
-        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;" data-i18n="settingsTitle">إعدادات النظام والشركة</h3>
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;">إعدادات النظام والشركة</h3>
         <div class="panel-box" style="display:flex; flex-direction:column; gap:8px;">
           <div>
             <label style="font-size:0.68rem; color:var(--text-muted);">اسم المشروع / الشركة</label>
@@ -325,10 +282,6 @@
             <label style="font-size:0.68rem; color:var(--text-muted);">التصنيف الفرعي</label>
             <input type="text" id="settingSubtitle" class="input-field" value="PREMIER BEVERIDGE CO">
           </div>
-          <div>
-            <label style="font-size:0.68rem; color:var(--text-muted);">أرقام التواصل</label>
-            <input type="text" id="settingPhones" class="input-field" value="01119843222 - 01507979090">
-          </div>
           <button id="saveSettingsBtn" class="btn btn-gold" style="margin-top:4px;">💾 حفظ الإعدادات</button>
         </div>
       </section>
@@ -337,76 +290,37 @@
 
     <!-- Bottom Navigation Bar -->
     <nav class="nav-bar">
-      <button class="nav-btn active" data-tab="pos"><span class="icon">🧾</span><span data-i18n="tabPos">POS</span></button>
-      <button class="nav-btn" data-tab="pending"><span class="icon">⏳</span><span data-i18n="tabPending">المعلقة</span><span id="pendingBadge" class="badge-count">0</span></button>
-      <button class="nav-btn" data-tab="reports"><span class="icon">📊</span><span data-i18n="tabReports">التقارير</span></button>
-      <button class="nav-btn" data-tab="menu" onclick="window.open('https://osama14492.github.io/FRESHLY-MENU-/', '_blank')"><span class="icon">📱</span><span data-i18n="tabMenu">المنيو</span></button>
-      <button class="nav-btn" data-tab="settings" id="settingsNavBtn"><span class="icon">⚙️</span><span data-i18n="tabSettings">الإعدادات</span></button>
+      <button class="nav-btn active" data-tab="pos"><span class="icon">🧾</span><span>POS</span></button>
+      <button class="nav-btn" data-tab="pending"><span class="icon">⏳</span><span>المعلقة</span><span id="pendingBadge" class="badge-count">0</span></button>
+      <button class="nav-btn" data-tab="reports"><span class="icon">📊</span><span>التقارير</span></button>
+      <button class="nav-btn" data-tab="menu" onclick="window.open('https://osama14492.github.io/FRESHLY-MENU-/', '_blank')"><span class="icon">📱</span><span>المنيو</span></button>
+      <button class="nav-btn" data-tab="settings"><span class="icon">⚙️</span><span>الإعدادات</span></button>
     </nav>
 
   </div>
 
 <script>
+  // تهيئة Firebase Realtime Database
+  const firebaseConfig = {
+    apiKey: "AIzaSyBMH6XnDvVz...",
+    authDomain: "freshly-pos.firebaseapp.com",
+    projectId: "freshly-pos",
+    storageBucket: "freshly-pos.appspot.com",
+    messagingSenderId: "92150322225",
+    appId: "1:92150322225:web:ced60779ef510197863110",
+    databaseURL: "https://freshly-pos-default-rtdb.firebaseio.com"
+  };
+  if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  const rtdb = firebase.database();
+
 document.addEventListener('DOMContentLoaded', () => {
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const I18N = {
-    ar: {
-      cartTitle: "تفاصيل الفاتورة الشاملة",
-      discountLabel: "الخصم (%)",
-      taxLabel: "الضريبة (%)",
-      grandTotalLabel: "الإجمالي النهائي:",
-      holdBtn: "تعليق الأوردر",
-      payBtn: "إتمام ودفع",
-      pendingTitle: "الأوردرات المعلقة والقادمة من الإنترنت",
-      reportsTitle: "التقارير اليومية والعهدة",
-      exchangeRateLabel: "سعر صرف اليورو (EUR to EGP):",
-      custodyBoxTitle: "إدارة العهدة اليومية للدرج",
-      dailyBreakdownTitle: "ملخص الأيام المالي",
-      settingsTitle: "إعدادات النظام والشركة",
-      tabPos: "POS",
-      tabPending: "المعلقة",
-      tabReports: "التقارير",
-      tabMenu: "المنيو",
-      tabSettings: "الإعدادات",
-      emptyCart: "الفاتورة فارغة (لم يتم إضافة أصناف)",
-      alertOrderCompleted: "تم إتمام الدفع بنجاح وتسجيل المبيعات! ✅",
-      alertOrderHeld: "تم تعليق الفاتورة بنجاح ⏳",
-      grandRow: "الإجمالي العام"
-    },
-    en: {
-      cartTitle: "Complete Bill Details",
-      discountLabel: "Discount (%)",
-      taxLabel: "Tax (%)",
-      grandTotalLabel: "Grand Total:",
-      holdBtn: "Hold Order",
-      payBtn: "Pay & Checkout",
-      pendingTitle: "Pending & Online Orders",
-      reportsTitle: "Daily Reports & Custody",
-      exchangeRateLabel: "EUR to EGP Exchange Rate:",
-      custodyBoxTitle: "Daily Drawer Custody",
-      dailyBreakdownTitle: "Daily Financial Summary",
-      settingsTitle: "System Settings",
-      tabPos: "POS",
-      tabPending: "Pending",
-      tabReports: "Reports",
-      tabMenu: "Menu",
-      tabSettings: "Settings",
-      emptyCart: "Cart is empty",
-      alertOrderCompleted: "Checkout completed successfully! ✅",
-      alertOrderHeld: "Order placed on hold ⏳",
-      grandRow: "Grand Total"
-    }
-  };
-
   const DEFAULT_ITEMS = [
-    { id: 'm1', categoryId: 'milkshake', names: { ar: 'ميلك شيك مانجو فاخر', en: 'Mango Milkshake' }, priceEGP: 350, priceEUR: 7 },
-    { id: 'm2', categoryId: 'milkshake', names: { ar: 'ميلك شيك فراولة', en: 'Strawberry Milkshake' }, priceEGP: 320, priceEUR: 6 },
-    { id: 'c1', categoryId: 'iced_coffee', names: { ar: 'آيس سبانيش لاتي', en: 'Iced Spanish Latte' }, priceEGP: 300, priceEUR: 6 },
-    { id: 'c2', categoryId: 'iced_coffee', names: { ar: 'آيس كراميل ماكياتو', en: 'Iced Caramel Macchiato' }, priceEGP: 320, priceEUR: 6.5 },
-    { id: 'j1', categoryId: 'fresh_juice', names: { ar: 'عصير مانجو فريش', en: 'Fresh Mango Juice' }, priceEGP: 250, priceEUR: 5 },
-    { id: 'f1', categoryId: 'fruit_platters', names: { ar: 'طبق فواكه استوائية', en: 'Tropical Fruit Platter' }, priceEGP: 450, priceEUR: 9 },
-    { id: 'mj1', categoryId: 'mojito', names: { ar: 'موهيتو بلو كوراكاو', en: 'Blue Curaçao Mojito' }, priceEGP: 280, priceEUR: 5.5 }
+    { id: 'm1', names: { ar: 'ميلك شيك مانجو فاخر', en: 'Mango Milkshake' }, priceEGP: 350, priceEUR: 7 },
+    { id: 'm2', names: { ar: 'ميلك شيك فراولة', en: 'Strawberry Milkshake' }, priceEGP: 320, priceEUR: 6 },
+    { id: 'c1', names: { ar: 'آيس سبانيش لاتي', en: 'Iced Spanish Latte' }, priceEGP: 300, priceEUR: 6 },
+    { id: 'j1', names: { ar: 'عصير مانجو فريش', en: 'Fresh Mango Juice' }, priceEGP: 250, priceEUR: 5 }
   ];
 
   function loadState() {
@@ -417,7 +331,6 @@ document.addEventListener('DOMContentLoaded', () => {
       sales: JSON.parse(localStorage.getItem('fp_sales_v3') || '[]'),
       held: JSON.parse(localStorage.getItem('fp_held_v3') || '[]'),
       custodyByDate: JSON.parse(localStorage.getItem('fp_custody_v3') || JSON.stringify({ [todayStr]: 1000 })),
-      expensesByDate: JSON.parse(localStorage.getItem('fp_expenses_v3') || '{}'),
       cart: []
     };
   }
@@ -429,11 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('fp_currency', state.currency);
     localStorage.setItem('fp_sales_v3', JSON.stringify(state.sales));
     localStorage.setItem('fp_held_v3', JSON.stringify(state.held));
-    localStorage.setItem('fp_custody_v3', JSON.stringify(state.custodyByDate));
-  }
-
-  function t(key) {
-    return (I18N[state.lang] && I18N[state.lang][key]) || I18N.ar[key] || key;
   }
 
   function formatMoney(amount) {
@@ -444,8 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function getItemTitle(item) {
     if (!item) return '';
-    if (item.names) return item.names[state.lang] || item.names.ar || item.names.en || '';
-    return item.name || '';
+    return item.names ? (item.names[state.lang] || item.names.ar) : (item.name || '');
   }
 
   function getUnitPrice(item) {
@@ -453,20 +360,40 @@ document.addEventListener('DOMContentLoaded', () => {
     return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
   }
 
+  // **الاستماع للأوردرات القادمة من الإنترنت (Firebase Realtime Database)**
+  rtdb.ref('orders').on('child_added', (snapshot) => {
+    const onlineOrder = snapshot.val();
+    if (onlineOrder && !state.held.some(o => o.id === onlineOrder.id)) {
+      state.held.unshift({
+        id: onlineOrder.id || ('WEB-' + Math.floor(100 + Math.random() * 900)),
+        customer: onlineOrder.customer || 'طلب من المنيو الإلكتروني',
+        date: onlineOrder.date || todayStr,
+        currency: onlineOrder.currency || 'EGP',
+        cart: onlineOrder.cart || [],
+        total: onlineOrder.total || 0,
+        orderType: onlineOrder.orderType || 'صالة',
+        paymentMethod: onlineOrder.paymentMethod || 'كاش'
+      });
+      persistState();
+      renderHeldOrders();
+      alert('🚨 وصل أوردر جديد من المنيو عبر الإنترنت وتم إضافته للأوردرات المعلقة!');
+    }
+  });
+
   window.addItemPrompt = function() {
-    const name = prompt("أدخل اسم المشروب / الصنف:");
+    const name = prompt("أدخل اسم الصنف:");
     if (!name) return;
-    const price = Number(prompt("أدخل السعر (EGP):", "300") || 300);
-    const customId = 'custom_' + Date.now();
-    state.items.push({ id: customId, names: { ar: name, en: name }, priceEGP: price, priceEUR: price / 55 });
-    state.cart.push({ itemId: customId, qty: 1, size: 'كبير', sugar: 'عادي', ice: 'وسط', note: '' });
+    const price = Number(prompt("السعر (EGP):", "300") || 300);
+    const id = 'custom_' + Date.now();
+    state.items.push({ id, names: { ar: name, en: name }, priceEGP: price, priceEUR: price / 55 });
+    state.cart.push({ itemId: id, qty: 1, size: 'كبير', sugar: 'عادي', ice: 'وسط', note: '' });
     renderCartFull();
   };
 
   function renderCartFull() {
     const list = document.getElementById('cartItemsListFull');
     if (state.cart.length === 0) {
-      list.innerHTML = `<div class="cart-empty">${t('emptyCart')}</div>`;
+      list.innerHTML = `<div class="cart-empty">الفاتورة فارغة</div>`;
       document.getElementById('grandTotalDisplay').textContent = formatMoney(0);
       return;
     }
@@ -482,147 +409,87 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="cart-row-detailed">
           <div class="cart-row-top">
             <span class="cart-item-name">${getItemTitle(item)}</span>
-            <button class="btn btn-danger" style="padding:1px 5px; font-size:0.6rem;" onclick="removeCartItem(${idx})">🗑️ حذف</button>
+            <button class="btn btn-danger" style="padding:1px 5px; font-size:0.6rem;" onclick="state.cart.splice(${idx},1); renderCartFull();">✕</button>
           </div>
-          
-          <!-- خانات تفاصيل المشروب الفردية -->
           <div class="item-options-grid">
-            <select onchange="updateItemOpt(${idx}, 'size', this.value)">
-              <option value="كبير" ${c.size==='كبير'?'selected':''}>حجم: كبير</option>
-              <option value="وسط" ${c.size==='وسط'?'selected':''}>حجم: وسط</option>
-              <option value="صغير" ${c.size==='صغير'?'selected':''}>حجم: صغير</option>
+            <select onchange="state.cart[${idx}].size=this.value">
+              <option value="كبير" ${c.size==='كبير'?'selected':''}>كبير</option>
+              <option value="وسط" ${c.size==='وسط'?'selected':''}>وسط</option>
             </select>
-            <select onchange="updateItemOpt(${idx}, 'sugar', this.value)">
-              <option value="عادي" ${c.sugar==='عادي'?'selected':''}>سكر: عادي</option>
-              <option value="خفيف" ${c.sugar==='خفيف'?'selected':''}>سكر: خفيف</option>
-              <option value="بدون" ${c.sugar==='بدون'?'selected':''}>سكر: بدون</option>
-              <option value="زيادة" ${c.sugar==='زيادة'?'selected':''}>سكر: زيادة</option>
+            <select onchange="state.cart[${idx}].sugar=this.value">
+              <option value="عادي" ${c.sugar==='عادي'?'selected':''}>سكر عادي</option>
+              <option value="بدون" ${c.sugar==='بدون'?'selected':''}>بدون سكر</option>
             </select>
-            <select onchange="updateItemOpt(${idx}, 'ice', this.value)">
-              <option value="وسط" ${c.ice==='وسط'?'selected':''}>ثلج: وسط</option>
-              <option value="زيادة" ${c.ice==='زيادة'?'selected':''}>ثلج: زياده</option>
-              <option value="بدون" ${c.ice==='بدون'?'selected':''}>ثلج: بدون</option>
+            <select onchange="state.cart[${idx}].ice=this.value">
+              <option value="وسط" ${c.ice==='وسط'?'selected':''}>ثلج وسط</option>
+              <option value="بدون" ${c.ice==='بدون'?'selected':''}>بدون ثلج</option>
             </select>
           </div>
-          <input type="text" class="input-field" style="padding:3px 6px; font-size:0.7rem;" placeholder="ملاحظات المشروب..." value="${c.note || ''}" oninput="updateItemOpt(${idx}, 'note', this.value)">
-
           <div class="cart-row-bottom">
-            <span style="color:var(--text-muted); font-size:0.72rem;">الفردي: <strong style="color:var(--gold-light);">${formatMoney(unit)}</strong></span>
+            <span style="color:var(--text-muted); font-size:0.7rem;">الفردي: ${formatMoney(unit)}</span>
             <div style="display:flex; align-items:center; gap:6px;">
-              <button class="qty-btn" onclick="changeQty(${idx}, -1)">-</button>
-              <span style="font-weight:900; min-width:16px; text-align:center; color:var(--gold-light);">${c.qty}</span>
-              <button class="qty-btn" onclick="changeQty(${idx}, 1)">+</button>
-              <span style="color:var(--gold-main); font-weight:900; margin-inline-start:4px;">${formatMoney(unit * c.qty)}</span>
+              <button class="qty-btn" onclick="state.cart[${idx}].qty--; if(state.cart[${idx}].qty<=0)state.cart.splice(${idx},1); renderCartFull();">-</button>
+              <span style="font-weight:900; color:var(--gold-light);">${c.qty}</span>
+              <button class="qty-btn" onclick="state.cart[${idx}].qty++; renderCartFull();">+</button>
+              <span style="color:var(--gold-main); font-weight:900;">${formatMoney(unit * c.qty)}</span>
             </div>
           </div>
         </div>
       `;
     }).join('');
 
-    const discPct = Math.max(0, Math.min(100, Number(document.getElementById('discountInput').value || 0)));
-    const taxPct = document.getElementById('hideTaxCheckbox').checked ? 0 : Math.max(0, Math.min(100, Number(document.getElementById('taxInput').value || 0)));
-
-    const afterDisc = subtotal * (1 - discPct / 100);
-    const finalTotal = afterDisc * (1 + taxPct / 100);
-
-    document.getElementById('grandTotalDisplay').textContent = formatMoney(finalTotal);
+    const disc = Number(document.getElementById('discountInput').value || 0);
+    const tax = document.getElementById('hideTaxCheckbox').checked ? 0 : Number(document.getElementById('taxInput').value || 0);
+    const total = (subtotal * (1 - disc / 100)) * (1 + tax / 100);
+    document.getElementById('grandTotalDisplay').textContent = formatMoney(total);
   }
 
-  window.updateItemOpt = function(idx, field, val) {
-    if (state.cart[idx]) state.cart[idx][field] = val;
-  };
-
-  window.changeQty = function(idx, delta) {
-    state.cart[idx].qty += delta;
-    if (state.cart[idx].qty <= 0) state.cart.splice(idx, 1);
-    renderCartFull();
-  };
-
-  window.removeCartItem = function(idx) {
-    state.cart.splice(idx, 1);
-    renderCartFull();
-  };
-
-  // إتمام الدفع وعرض الفاتورة النهائية
   document.getElementById('checkoutBtn').addEventListener('click', () => {
-    if (state.cart.length === 0) return alert(t('emptyCart'));
+    if (state.cart.length === 0) return alert('الفاتورة فارغة');
     const customer = document.getElementById('customerNameInput').value.trim() || 'كاشير عام';
-    const saleDate = document.getElementById('saleDateInput').value || todayStr;
-    const orderType = document.getElementById('orderTypeSelect').value;
-    const paymentMethod = document.getElementById('paymentMethodSelect').value;
-    const cashier = document.getElementById('cashierNameInput').value;
-
     let subtotal = 0;
-    state.cart.forEach(c => {
-      const it = state.items.find(i => i.id === c.itemId);
-      subtotal += getUnitPrice(it) * c.qty;
-    });
+    state.cart.forEach(c => subtotal += getUnitPrice(state.items.find(i => i.id === c.itemId)) * c.qty);
 
-    const discPct = Number(document.getElementById('discountInput').value || 0);
-    const taxPct = document.getElementById('hideTaxCheckbox').checked ? 0 : Number(document.getElementById('taxInput').value || 0);
-    const afterDisc = subtotal * (1 - discPct / 100);
-    const finalTotal = afterDisc * (1 + taxPct / 100);
-
-    const newSale = {
+    const sale = {
       id: 'SALE-' + Math.floor(1000 + Math.random() * 9000),
       customer,
-      orderType,
-      paymentMethod,
-      cashier,
-      date: saleDate,
-      currency: state.currency,
+      date: document.getElementById('saleDateInput').value || todayStr,
       cart: [...state.cart],
-      total: finalTotal
+      total
     };
 
-    state.sales.unshift(newSale);
+    state.sales.unshift(sale);
     persistState();
-    
-    showReceiptModal(newSale);
+    showReceiptModal(sale);
     state.cart = [];
     document.getElementById('customerNameInput').value = '';
     renderCartFull();
-    renderReports();
   });
 
-  // تعليق الأوردر
   document.getElementById('holdOrderBtn').addEventListener('click', () => {
-    if (state.cart.length === 0) return alert(t('emptyCart'));
-    const customer = document.getElementById('customerNameInput').value.trim() || 'معلق';
-    const saleDate = document.getElementById('saleDateInput').value || todayStr;
-
-    let subtotal = 0;
-    state.cart.forEach(c => {
-      const it = state.items.find(i => i.id === c.itemId);
-      subtotal += getUnitPrice(it) * c.qty;
-    });
-
+    if (state.cart.length === 0) return alert('الفاتورة فارغة');
     state.held.unshift({
       id: 'HELD-' + Math.floor(100 + Math.random() * 900),
-      customer,
-      date: saleDate,
-      currency: state.currency,
+      customer: document.getElementById('customerNameInput').value.trim() || 'معلق',
+      date: todayStr,
       cart: [...state.cart],
-      total: subtotal
+      total: 0
     });
     persistState();
-    alert(t('alertOrderHeld'));
     state.cart = [];
-    document.getElementById('customerNameInput').value = '';
     renderCartFull();
     renderHeldOrders();
+    alert('تم تعليق الأوردر بنجاح ⏳');
   });
 
-  // عرض الأوردرات المعلقة وتحديث العداد
   function renderHeldOrders() {
     const container = document.getElementById('pendingOrdersList');
     const badge = document.getElementById('pendingBadge');
-    
     badge.textContent = state.held.length;
     badge.style.display = state.held.length > 0 ? 'inline-block' : 'none';
 
     if (state.held.length === 0) {
-      container.innerHTML = `<div class="cart-empty">لا توجد أوردرات معلقة أو قادمة من الإنترنت حالياً</div>`;
+      container.innerHTML = `<div class="cart-empty">لا توجد أوردرات معلقة</div>`;
       return;
     }
 
@@ -630,153 +497,66 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="panel-box" style="display:flex; justify-content:space-between; align-items:center; padding:8px;">
         <div>
           <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">📍 ${ord.customer} (${ord.id})</div>
-          <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — إجمالي: ${formatMoney(ord.total || 0)}</div>
+          <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date}</div>
         </div>
         <div style="display:flex; gap:4px;">
           <button class="btn btn-gold" style="padding:6px 10px; font-size:0.75rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 مراجعة وإتمام</button>
-          <button class="btn btn-danger" style="padding:6px 8px; font-size:0.7rem;" onclick="removeHeldOrder('${ord.id}')">✕</button>
+          <button class="btn btn-danger" style="padding:6px 8px; font-size:0.7rem;" onclick="removeHeld('${ord.id}')">✕</button>
         </div>
       </div>
     `).join('');
   }
 
-  // **الطلب الأساسي:** عند الضغط على إتمام/سحب الأوردر المعلق، يتحول تلقائياً إلى شاشة الكاشير وأنت تقرر
   window.loadHeldOrderToCart = function(id) {
     const ord = state.held.find(o => o.id === id);
-    if (!ord || !ord.cart) return;
-
-    // نقل الأوردر إلى شاشة الكاشير لتتخذ القرار (مراجعة، تعليق آخر، أو دفع)
-    state.cart = ord.cart.map(c => ({ 
-      itemId: c.itemId, 
-      qty: c.qty, 
-      size: c.size || 'كبير', 
-      sugar: c.sugar || 'عادي', 
-      ice: c.ice || 'وسط', 
-      note: c.note || '' 
-    }));
-    document.getElementById('customerNameInput').value = ord.customer || '';
-    
-    // إزالته من القائمة المعلقة بعد سحبه للكاشير
+    if (!ord) return;
+    state.cart = ord.cart.map(c => ({ ...c }));
+    document.getElementById('customerNameInput').value = ord.customer;
     state.held = state.held.filter(o => o.id !== id);
     persistState();
     renderHeldOrders();
     renderCartFull();
     switchTab('pos');
-    alert('📥 تم نقل الأوردر المعلق إلى شاشة الكاشير بنجاح! يمكنك الآن مراجعته وإتمام دفعه أو تعليقه.');
+    alert('📥 تم سحب الأوردر إلى شاشة الكاشير لمراجعته والقرار بشأنه!');
   };
 
-  window.removeHeldOrder = function(id) {
+  window.removeHeld = function(id) {
     state.held = state.held.filter(o => o.id !== id);
     persistState();
     renderHeldOrders();
   };
 
-  // محاكاة استقبال أوردر جديد من الإنترنت (Firebase / المنيو الإلكتروني)
-  window.simulateIncomingOnlineOrder = function() {
-    const onlineOrder = {
-      id: 'WEB-' + Math.floor(100 + Math.random() * 900),
-      customer: 'أوردر من المنيو الإلكتروني (طاولة أونلاين)',
-      date: todayStr,
-      currency: 'EGP',
-      cart: [
-        { itemId: 'm1', qty: 2, size: 'كبير', sugar: 'عادي', ice: 'وسط', note: 'بدون شيكولاتة إضافية' },
-        { itemId: 'c1', qty: 1, size: 'كبير', sugar: 'خفيف', ice: 'وسط', note: '' }
-      ],
-      total: 1000
-    };
-    state.held.unshift(onlineOrder);
-    persistState();
-    renderHeldOrders();
-  };
-
-  // نافذة المعاينة والطباعة
   function showReceiptModal(sale) {
     const modal = document.getElementById('receiptModal');
     const area = document.getElementById('receiptPrintArea');
-    
-    let itemsHtml = sale.cart.map(c => {
-      const it = state.items.find(i => i.id === c.itemId);
-      const unit = state.currency === 'EGP' ? it.priceEGP : it.priceEUR;
-      return `<div><b>${getItemTitle(it)}</b> x ${c.qty}<br><small>(${c.size} | سكر: ${c.sugar} | ثلج: ${c.ice})</small><span style="float:left;">${formatMoney(unit * c.qty)}</span></div>`;
-    }).join('<div class="receipt-line"></div>');
-
     area.innerHTML = `
-      <div class="receipt-center"><b>FRESHLY & PREMIER</b><br>PREMIER BEVERIDGE CO<br>الغردقة - شارع النصر</div>
+      <div class="receipt-center"><b>FRESHLY & PREMIER</b><br>رقم: ${sale.id}</div>
       <div class="receipt-line"></div>
-      <div>رقم الفاتورة: ${sale.id}<br>العميل: ${sale.customer}<br>النوع: ${sale.orderType} | الدفع: ${sale.paymentMethod}<br>التاريخ: ${sale.date}</div>
+      <div>العميل: ${sale.customer}<br>التاريخ: ${sale.date}</div>
       <div class="receipt-line"></div>
-      ${itemsHtml}
-      <div class="receipt-line"></div>
-      <div style="font-size:0.85rem; font-weight:bold;">الإجمالي النهائي: <span style="float:left;">${formatMoney(sale.total)}</span></div>
-      <div class="receipt-center" style="margin-top:10px;"><small>كاشير: ${sale.cashier}<br>شكراً لزيارتكم FRESHLY!</small></div>
+      الإجمالي: <b>${formatMoney(sale.total)}</b>
     `;
-
     document.getElementById('qrcodeContainer').innerHTML = "";
-    new QRCode(document.getElementById("qrcodeContainer"), { text: `Invoice: ${sale.id} | Total: ${sale.total}`, width: 100, height: 100 });
+    new QRCode(document.getElementById("qrcodeContainer"), { text: `Invoice: ${sale.id}`, width: 90, height: 90 });
     modal.style.display = 'flex';
   }
 
-  window.closeReceiptModal = function() {
-    document.getElementById('receiptModal').style.display = 'none';
-  };
-
-  window.printDirectReceipt = function() {
-    window.print();
-  };
-
-  window.sendWhatsAppReceipt = function() {
-    const phone = document.getElementById('customerPhoneInput').value || '201119843222';
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent('شكراً لطلبك من FRESHLY & PREMIER. تم إصدار فاتورتك بنجاح!')}`, '_blank');
-  };
-
-  function renderReports() {
-    const dateSet = new Set();
-    state.sales.forEach(s => dateSet.add(s.date));
-    let dates = Array.from(dateSet).sort().reverse();
-
-    let sumTotalEgp = 0;
-    let totalOrdersCount = 0;
-
-    const tbody = document.getElementById('dailyBreakdownBody');
-    tbody.innerHTML = dates.map(d => {
-      const daySales = state.sales.filter(s => s.date === d);
-      const dayTotalEgp = daySales.reduce((a, b) => a + Number(b.total), 0);
-      sumTotalEgp += dayTotalEgp;
-      totalOrdersCount += daySales.length;
-
-      return `
-        <tr>
-          <td style="font-weight:700;">${d}</td>
-          <td>${daySales.length}</td>
-          <td>${state.custodyByDate[d] || 0}</td>
-          <td style="color:var(--danger);">0</td>
-          <td style="color:var(--gold-main); font-weight:800;">${dayTotalEgp.toFixed(2)} EGP</td>
-        </tr>
-      `;
-    }).join('');
-
-    document.getElementById('statTotalSalesEgpVal').textContent = `${sumTotalEgp.toFixed(2)} EGP`;
-    document.getElementById('statNetDrawerVal').textContent = `${(1000 + sumTotalEgp).toFixed(2)} EGP`;
-  }
+  window.closeReceiptModal = () => document.getElementById('receiptModal').style.display = 'none';
+  window.printDirectReceipt = () => window.print();
+  window.sendWhatsAppReceipt = () => window.open(`https://wa.me/201119843222?text=${encodeURIComponent('شكراً لطلبك من FRESHLY!')}`, '_blank');
 
   function switchTab(name) {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === name));
     document.querySelectorAll('.view-section').forEach(s => s.classList.toggle('active', s.id === `view-${name}`));
-    if (name === 'reports') renderReports();
     if (name === 'pending') renderHeldOrders();
   }
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const tab = btn.getAttribute('data-tab');
-    if (tab && tab !== 'menu') {
-      btn.addEventListener('click', () => switchTab(tab));
-    }
+    if (tab && tab !== 'menu') btn.addEventListener('click', () => switchTab(tab));
   });
 
   document.getElementById('saleDateInput').value = todayStr;
-  document.getElementById('custodyDateInput').value = todayStr;
-  document.getElementById('custodyAmountInput').value = 1000;
-
   renderCartFull();
   renderHeldOrders();
 });
