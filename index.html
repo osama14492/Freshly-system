@@ -113,8 +113,8 @@
 </head>
 <body>
 
-  <!-- عنصر الصوت للتنبيه (قابل للتغيير لاحقاً برابط ملف صوتي آخر) -->
-  <audio id="orderAlertSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+  <!-- عنصر الصوت للتنبيه -->
+  <audio id="orderAlertSound" preload="auto"></audio>
 
   <div class="phone-frame">
     <div id="toastBanner" class="toast-banner"><span id="toastText">تم التنفيذ بنجاح!</span></div>
@@ -340,6 +340,13 @@
             <label style="font-size:0.68rem; color:var(--text-muted);">التصنيف الفرعي</label>
             <input type="text" id="settingSubtitle" class="input-field" value="PREMIER BEVERIDGE CO">
           </div>
+          
+          <!-- إضافة خيار تخصيص ورفع صوت التنبيه من الهاتف -->
+          <div style="border-top: 1px solid var(--border-subtle); padding-top:6px; margin-top:4px;">
+            <label style="font-size:0.68rem; color:var(--gold-light); display:block; margin-bottom:4px;">🔔 تغيير نغمة تنبيه الأوردرات (اختر ملف صوتي من الموبايل)</label>
+            <input type="file" id="customAudioInput" accept="audio/*" class="input-field" style="font-size:0.7rem; padding:4px;">
+          </div>
+
           <button id="saveSettingsBtn" class="btn btn-gold" style="margin-top:4px;">💾 حفظ الإعدادات</button>
         </div>
       </section>
@@ -390,6 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
       held: JSON.parse(localStorage.getItem('fp_held_v3') || '[]'),
       custodyByDate: JSON.parse(localStorage.getItem('fp_custody_v3') || JSON.stringify({ [todayStr]: 1000 })),
       expensesByDate: JSON.parse(localStorage.getItem('fp_expenses_v3') || '{}'),
+      customAlertSound: localStorage.getItem('fp_custom_sound') || 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
       cart: []
     };
   }
@@ -403,6 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('fp_held_v3', JSON.stringify(state.held));
     localStorage.setItem('fp_custody_v3', JSON.stringify(state.custodyByDate));
     localStorage.setItem('fp_expenses_v3', JSON.stringify(state.expensesByDate));
+    localStorage.setItem('fp_custom_sound', state.customAlertSound);
   }
 
   function formatMoney(amount) {
@@ -421,14 +430,33 @@ document.addEventListener('DOMContentLoaded', () => {
     return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
   }
 
-  // **تشغيل صوت التنبيه عند وصول أوردر جديد**
+  // **إعداد وتشغيل صوت التنبيه**
+  const audioPlayer = document.getElementById('orderAlertSound');
+  if (state.customAlertSound) {
+    audioPlayer.src = state.customAlertSound;
+  }
+
   function playAlertSound() {
-    const sound = document.getElementById('orderAlertSound');
-    if (sound) {
-      sound.currentTime = 0;
-      sound.play().catch(e => console.log("Audio play blocked by browser policy until user interaction"));
+    if (audioPlayer) {
+      audioPlayer.currentTime = 0;
+      audioPlayer.play().catch(e => console.log("Audio play blocked until user interacts"));
     }
   }
+
+  // ربط اختيار ملف صوتي جديد من الموبايل
+  document.getElementById('customAudioInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        state.customAlertSound = evt.target.result;
+        audioPlayer.src = state.customAlertSound;
+        persistState();
+        alert('🎵 تم تغيير وصفظ نغمة التنبيه بنجاح!');
+      };
+      reader.readAsDataURL(file);
+    }
+  });
 
   // **استماع وتحديث فوري للأوردرات القادمة من مجلد pendingOrders في قاعدة البيانات**
   rtdb.ref('pendingOrders').on('child_added', (snapshot) => {
@@ -645,7 +673,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const ord = state.held.find(o => o.id === id);
     if (!ord) return;
 
-    // إذا كان الأوردر قادماً من المنيو الإلكتروني، يتم حذفه تلقائياً من قاعدة بيانات Firebase
     if (String(id).startsWith('WEB-')) {
       rtdb.ref('pendingOrders/' + id).remove().catch(err => {
         console.error("Error removing order from Firebase:", err);
@@ -684,7 +711,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.removeHeld = function(id) {
-    // إذا قام بحذفه يدوياً من زر ✕ لأوردر قادم من المنيو، يتم حذفه من قاعدة البيانات أيضاً
     if (String(id).startsWith('WEB-')) {
       rtdb.ref('pendingOrders/' + id).remove().catch(err => {
         console.error("Error removing order from Firebase:", err);
