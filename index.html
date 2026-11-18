@@ -352,7 +352,7 @@
   </div>
 
 <script>
-  // تهيئة Firebase Realtime Database للربط بالمنيو الإلكتروني
+  // تهيئة Firebase Realtime Database
   const firebaseConfig = {
     apiKey: "AIzaSyBMH6XnDvVz...",
     authDomain: "freshly-pos.firebaseapp.com",
@@ -415,20 +415,19 @@ document.addEventListener('DOMContentLoaded', () => {
     return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
   }
 
-  // **تم تعديل الاستماع ليتطابق بدقة مع جذر قاعدة البيانات (Root) حيث يتم حفظ الأوردرات برقم الأوردر مباشرة**
+  // **استماع وتحديث فوري للأوردرات القادمة من قاعدة البيانات برقم الأوردر المباشر**
   rtdb.ref('/').on('child_added', (snapshot) => {
     const onlineOrder = snapshot.val();
-    // التحقق من أن العضوة عبارة عن أوردر يحتوي على رقم وسلة تسوق
-    if (onlineOrder && onlineOrder.id && onlineOrder.cart) {
-      if (!state.held.some(o => o.id === onlineOrder.id)) {
-        // تنظيف القيمة النصية للإجمالي وتحويلها لرقم
+    if (onlineOrder && onlineOrder.cart) {
+      const orderId = onlineOrder.id || snapshot.key;
+      if (!state.held.some(o => o.id === orderId)) {
         let rawTotal = onlineOrder.total || 0;
         if (typeof rawTotal === 'string') {
           rawTotal = Number(rawTotal.replace(/[^0-9.]/g, '')) || 0;
         }
 
         state.held.unshift({
-          id: onlineOrder.id,
+          id: orderId,
           customer: onlineOrder.customer || 'طلب من المنيو الإلكتروني',
           date: onlineOrder.date || todayStr,
           currency: 'EGP',
@@ -438,8 +437,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         persistState();
         renderHeldOrders();
-        alert('🚨 وصل أوردر جديد من المنيو عبر الإنترنت (' + onlineOrder.id + ') وتم إضافته للأوردرات المعلقة بنجاح!');
+        alert('🚨 وصل أوردر جديد من المنيو عبر الإنترنت (' + orderId + ') وتم إضافته للأوردرات المعلقة بنجاح!');
       }
+    }
+  });
+
+  // التحقق الفوري من الأوردرات الموجودة مسبقاً عند فتح التطبيق
+  rtdb.ref('/').once('value', (snapshot) => {
+    const allOrders = snapshot.val();
+    if (allOrders) {
+      Object.keys(allOrders).forEach(key => {
+        const onlineOrder = allOrders[key];
+        if (onlineOrder && onlineOrder.cart) {
+          const orderId = onlineOrder.id || key;
+          if (!state.held.some(o => o.id === orderId) && !state.sales.some(s => s.id === orderId)) {
+            let rawTotal = onlineOrder.total || 0;
+            if (typeof rawTotal === 'string') {
+              rawTotal = Number(rawTotal.replace(/[^0-9.]/g, '')) || 0;
+            }
+            state.held.unshift({
+              id: orderId,
+              customer: onlineOrder.customer || 'طلب من المنيو الإلكتروني',
+              date: onlineOrder.date || todayStr,
+              currency: 'EGP',
+              cart: onlineOrder.cart || [],
+              total: rawTotal,
+              paymentMethod: 'كاش'
+            });
+          }
+        }
+      });
+      persistState();
+      renderHeldOrders();
     }
   });
 
