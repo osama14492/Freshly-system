@@ -301,9 +301,17 @@
           </div>
         </div>
 
-        <div class="panel-box no-print" style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px;">
-          <span style="font-size:0.72rem; font-weight:800; color:var(--gold-light);">سعر صرف اليورو (EUR to EGP):</span>
-          <input type="number" id="exchangeRateInput" class="input-field" value="55" step="0.1" style="max-width:80px; text-align:center;">
+        <div class="panel-box no-print" style="display:flex; flex-direction:column; gap:8px; padding:8px 10px;">
+          <div style="font-size:0.72rem; font-weight:800; color:var(--gold-light);">طريقة عرض العملات في التقارير</div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.7rem;">
+            <label style="display:flex; align-items:center; gap:5px;"><input type="radio" name="reportCurrencyMode" value="convert" checked> تحويل كل العملات إلى الجنيه المصري</label>
+            <label style="display:flex; align-items:center; gap:5px;"><input type="radio" name="reportCurrencyMode" value="original"> إبقاء كل عملة كما هي</label>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span style="font-size:0.7rem; font-weight:800; color:var(--gold-light);">سعر صرف اليورو مقابل الجنيه (1 EUR = EGP):</span>
+            <input type="number" id="exchangeRateInput" class="input-field" value="55" min="0.01" step="0.01" style="max-width:90px; text-align:center;">
+          </div>
+          <small style="font-size:0.6rem; color:var(--text-muted);">يُستخدم السعر في التقارير فقط، ويمكنك تعديله في أي وقت.</small>
         </div>
 
         <div class="panel-box no-print">
@@ -630,10 +638,19 @@ document.addEventListener('DOMContentLoaded', () => {
       customer,
       date: document.getElementById('saleDateInput').value || todayStr,
       cart: [...state.cart],
-      total: subtotal
+      total: subtotal,
+      currency: state.currency || 'EGP'
     };
 
     state.sales.unshift(sale);
+    if (lastAutoLoadedOrderId) {
+      const completedHeldId = lastAutoLoadedOrderId;
+      state.held = state.held.filter(order => order.id !== completedHeldId);
+      if (String(completedHeldId).startsWith('WEB-')) {
+        rtdb.ref('pendingOrders/' + completedHeldId).remove().catch(err => console.error('Error completing pending order:', err));
+      }
+      lastAutoLoadedOrderId = null;
+    }
     persistState();
     showReceiptModal(sale);
     state.cart = [];
@@ -704,11 +721,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  window.loadHeldOrderToCart = function(id) {
+  window.loadHeldOrderToCart = function(id, keepInPending = false) {
     const ord = state.held.find(o => o.id === id);
     if (!ord) return;
 
-    if (String(id).startsWith('WEB-')) {
+    if (!keepInPending && String(id).startsWith('WEB-')) {
       rtdb.ref('pendingOrders/' + id).remove().catch(err => {
         console.error("Error removing order from Firebase:", err);
       });
@@ -737,16 +754,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    state.held = state.held.filter(o => o.id !== id);
+    if (!keepInPending) {
+      state.held = state.held.filter(o => o.id !== id);
+      lastAutoLoadedOrderId = null;
+    }
     persistState();
     renderHeldOrders();
     renderCartFull();
     switchTab('pos');
-    alert('📥 تم سحب الأوردر رقم (' + ord.id + ') وحذفه من قاعدة البيانات، وتم نقله لشاشة الكاشير بنجاح!');
+    if (!keepInPending) {
+      alert('📥 تم سحب الأوردر رقم (' + ord.id + ') وحذفه من قاعدة البيانات، وتم نقله لشاشة الكاشير بنجاح!');
+    }
   };
 
 
-  // استرجاع الفاتورة المعلقة تلقائياً عند إدخال رقم الغرفة/الطاولة أو اسم العميل بالكامل.
+  // البحث التلقائي في الأوردرات المعلقة برقم الغرفة أو الطاولة أو اسم العميل.
   function normalizeOrderLookup(value) {
     return String(value || '')
       .trim()
@@ -754,44 +776,65 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
       .replace(/[أإآ]/g, 'ا')
       .replace(/ة/g, 'ه')
+      .replace(/[ً-ٰٟ]/g, '')
       .replace(/[\s\-_#.,:؛،/\\]+/g, '');
+  }
+
+  function getOrderLookupValues(order) {
+    const values = [
+      order.customer, order.customerName, order.name,
+      order.room, order.roomNumber, order.roomNo, order.room_number,
+      order.table, order.tableNumber, order.tableNo, order.table_number,
+      order.roomName, order.tableName
+    ];
+    return values.filter(value => value !== undefined && value !== null && String(value).trim() !== '');
   }
 
   function findMatchingHeldOrder(value) {
     const query = normalizeOrderLookup(value);
     if (!query) return null;
 
-    const exactMatches = state.held.filter(order =>
-      normalizeOrderLookup(order.customer) === query
-    );
-    if (exactMatches.length === 1) return exactMatches[0];
+    const orders = state.held.map(order => ({ order, values: getOrderLookupValues(order).map(normalizeOrderLookup) }));
+    let matches = orders.filter(entry => entry.values.some(candidate => candidate === query));
+    if (matches.length === 1) return matches[0].order;
+    if (matches.length > 1) return null;
 
-    // يسمح بكتابة الرقم فقط إذا كان فريداً داخل أسماء الأوردرات المعلقة.
+    // السماح بإدخال رقم الغرفة/الطاولة وحده إذا كان رقماً مميزاً في بيانات الأوردر.
     const queryDigits = query.replace(/\D/g, '');
     if (queryDigits.length >= 2) {
-      const numberMatches = state.held.filter(order => {
-        const customer = normalizeOrderLookup(order.customer);
-        const customerDigits = customer.replace(/\D/g, '');
-        return customerDigits === queryDigits;
-      });
-      if (numberMatches.length === 1) return numberMatches[0];
+      matches = orders.filter(entry => entry.values.some(candidate => {
+        const candidateDigits = candidate.replace(/\D/g, '');
+        return candidateDigits && candidateDigits === queryDigits;
+      }));
+      if (matches.length === 1) return matches[0].order;
+      if (matches.length > 1) return null;
+    }
+
+    // دعم الاسم الجزئي عند تميّزه في أوردر واحد فقط.
+    if (query.length >= 3) {
+      matches = orders.filter(entry => entry.values.some(candidate => candidate.includes(query)));
+      if (matches.length === 1) return matches[0].order;
     }
     return null;
   }
 
   let lastAutoLoadedOrderId = null;
-  document.getElementById('customerNameInput').addEventListener('input', function() {
-    const match = findMatchingHeldOrder(this.value);
-    if (!match || match.id === lastAutoLoadedOrderId) return;
+  const customerLookupInput = document.getElementById('customerNameInput');
+  function autoLoadMatchingHeldOrder() {
+    const typedValue = customerLookupInput.value;
+    const match = findMatchingHeldOrder(typedValue);
+    if (!match) {
+      lastAutoLoadedOrderId = null;
+      return;
+    }
+    if (match.id === lastAutoLoadedOrderId) return;
     lastAutoLoadedOrderId = match.id;
-    window.loadHeldOrderToCart(match.id);
-  });
-  document.getElementById('customerNameInput').addEventListener('change', function() {
-    const match = findMatchingHeldOrder(this.value);
-    if (!match || match.id === lastAutoLoadedOrderId) return;
-    lastAutoLoadedOrderId = match.id;
-    window.loadHeldOrderToCart(match.id);
-  });
+    // عرض تفاصيل الأوردر في الفاتورة دون حذفه من قائمة المعلّق أو قاعدة البيانات.
+    window.loadHeldOrderToCart(match.id, true);
+    customerLookupInput.value = typedValue;
+  }
+  customerLookupInput.addEventListener('input', autoLoadMatchingHeldOrder);
+  customerLookupInput.addEventListener('change', autoLoadMatchingHeldOrder);
 
   window.removeHeld = function(id) {
     if (String(id).startsWith('WEB-')) {
@@ -808,19 +851,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const period = document.getElementById('reportPeriodSelect').value;
     const customBox = document.getElementById('customDateRangeBox');
     const now = new Date();
-    
     customBox.style.display = period === 'custom' ? 'grid' : 'none';
+
+    const mode = document.querySelector('input[name="reportCurrencyMode"]:checked')?.value || localStorage.getItem('fp_report_currency_mode') || 'convert';
+    const rateInput = document.getElementById('exchangeRateInput');
+    const exchangeRate = Math.max(0.01, Number(rateInput.value) || 55);
+    localStorage.setItem('fp_report_currency_mode', mode);
+    localStorage.setItem('fp_report_eur_rate', String(exchangeRate));
 
     const dateSet = new Set();
     state.sales.forEach(s => dateSet.add(s.date));
     Object.keys(state.custodyByDate).forEach(d => dateSet.add(d));
     Object.keys(state.expensesByDate).forEach(d => dateSet.add(d));
-    
     let dates = Array.from(dateSet).sort().reverse();
 
-    if (period === 'today') {
-      dates = dates.filter(d => d === todayStr);
-    } else if (period === '7days') {
+    if (period === 'today') dates = dates.filter(d => d === todayStr);
+    else if (period === '7days') {
       const limit = new Date(); limit.setDate(now.getDate() - 7);
       dates = dates.filter(d => new Date(d) >= limit);
     } else if (period === '30days') {
@@ -833,55 +879,89 @@ document.addEventListener('DOMContentLoaded', () => {
       if (end) dates = dates.filter(d => d <= end);
     }
 
-    let sumCustody = 0;
-    let sumExpenses = 0;
-    let sumSales = 0;
-    let totalOrders = 0;
+    const totalsFor = sales => sales.reduce((acc, sale) => {
+      const currency = String(sale.currency || 'EGP').toUpperCase() === 'EUR' ? 'EUR' : 'EGP';
+      acc[currency] += Number(sale.total || 0);
+      return acc;
+    }, { EGP: 0, EUR: 0 });
+    const money = (amount, currency) => `${Number(amount || 0).toFixed(2)} ${currency}`;
+    const displaySales = totals => mode === 'convert'
+      ? money(totals.EGP + totals.EUR * exchangeRate, 'EGP')
+      : [totals.EGP ? money(totals.EGP, 'EGP') : '', totals.EUR ? money(totals.EUR, 'EUR') : ''].filter(Boolean).join(' + ') || '0.00 EGP';
 
+    let sumCustody = 0, sumExpenses = 0, totalOrders = 0;
+    const sumSalesByCurrency = { EGP: 0, EUR: 0 };
     const tbody = document.getElementById('dailyBreakdownBody');
     tbody.innerHTML = dates.map(d => {
       const daySales = state.sales.filter(s => s.date === d);
-      const dayTotal = daySales.reduce((a, b) => a + Number(b.total), 0);
+      const dayTotals = totalsFor(daySales);
       const cust = Number(state.custodyByDate[d] || 0);
       const expList = state.expensesByDate[d] || [];
-      const dayExp = expList.reduce((a, b) => a + Number(b.amount), 0);
-
-      sumCustody += cust;
-      sumExpenses += dayExp;
-      sumSales += dayTotal;
-      totalOrders += daySales.length;
-
-      return `
-        <tr>
-          <td style="font-weight:700;">${d}</td>
-          <td>${daySales.length}</td>
-          <td>${cust}</td>
-          <td style="color:var(--danger);">${dayExp}</td>
-          <td style="color:var(--gold-main); font-weight:800;">${dayTotal.toFixed(2)}</td>
-        </tr>
-      `;
+      const dayExp = expList.reduce((a, b) => a + Number(b.amount || 0), 0);
+      sumCustody += cust; sumExpenses += dayExp; totalOrders += daySales.length;
+      sumSalesByCurrency.EGP += dayTotals.EGP;
+      sumSalesByCurrency.EUR += dayTotals.EUR;
+      return `<tr><td style="font-weight:700;">${d}</td><td>${daySales.length}</td><td>${cust.toFixed(2)} EGP</td><td style="color:var(--danger);">${dayExp.toFixed(2)} EGP</td><td style="color:var(--gold-main); font-weight:800;">${displaySales(dayTotals)}</td></tr>`;
     }).join('');
 
-    document.getElementById('dailyBreakdownFoot').innerHTML = `
-      <tr style="background:rgba(212,175,55,0.16); font-weight:900;">
-        <td>الإجمالي</td>
-        <td>${totalOrders}</td>
-        <td>${sumCustody}</td>
-        <td style="color:var(--danger);">${sumExpenses}</td>
-        <td style="color:var(--gold-main);">${sumSales.toFixed(2)}</td>
-      </tr>
-    `;
+    const totalSalesDisplay = displaySales(sumSalesByCurrency);
+    const netDrawerEGP = sumCustody + sumSalesByCurrency.EGP + (mode === 'convert' ? sumSalesByCurrency.EUR * exchangeRate : 0) - sumExpenses;
+    const netDrawerDisplay = mode === 'convert'
+      ? money(netDrawerEGP, 'EGP')
+      : `${money(sumCustody + sumSalesByCurrency.EGP - sumExpenses, 'EGP')}${sumSalesByCurrency.EUR ? ' | مبيعات ' + money(sumSalesByCurrency.EUR, 'EUR') : ''}`;
 
-    document.getElementById('statTotalSalesVal').textContent = `${sumSales.toFixed(2)} EGP`;
-    document.getElementById('statNetDrawerVal').textContent = `${(sumCustody + sumSales - sumExpenses).toFixed(2)} EGP`;
+    document.getElementById('dailyBreakdownFoot').innerHTML = `<tr style="background:rgba(212,175,55,0.16); font-weight:900;"><td>الإجمالي</td><td>${totalOrders}</td><td>${sumCustody.toFixed(2)} EGP</td><td style="color:var(--danger);">${sumExpenses.toFixed(2)} EGP</td><td style="color:var(--gold-main);">${totalSalesDisplay}</td></tr>`;
+    document.getElementById('statTotalSalesVal').textContent = totalSalesDisplay;
+    document.getElementById('statNetDrawerVal').textContent = netDrawerDisplay;
   }
-
 
   document.getElementById('printReportBtn').addEventListener('click', () => {
     renderReports();
-    window.print();
+    const reportSection = document.getElementById('view-reports');
+    const printable = reportSection.cloneNode(true);
+    printable.querySelectorAll('.no-print').forEach(element => element.remove());
+    const printWindow = window.open('', '_blank');
+
+    if (!printWindow) {
+      // احتياطي في حالة منع المتصفح فتح نافذة جديدة.
+      window.print();
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(`<!DOCTYPE html>
+      <html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>تقرير FRESHLY &amp; PREMIER</title>
+      <style>
+        *{box-sizing:border-box} body{font-family:Arial,Tahoma,sans-serif;color:#111;background:#fff;margin:18px}
+        h3,h4{font-size:16px;margin:0 0 12px;color:#111!important}
+        .view-section{display:flex!important;flex-direction:column;gap:10px;height:auto!important}
+        .panel-box{display:block;background:#fff!important;color:#111!important;border:1px solid #bbb;border-radius:6px;padding:10px;margin-bottom:8px;overflow:visible!important;break-inside:avoid}
+        table{width:100%;border-collapse:collapse;font-size:12px} th,td{border:1px solid #bbb;padding:7px;text-align:right;color:#111!important}
+        th{font-weight:bold} .data-table{width:100%} .data-table th,.data-table td{border:1px solid #bbb}
+        @media print{body{margin:10mm}.panel-box{break-inside:avoid}}
+      </style></head><body>${printable.outerHTML}</body></html>`);
+    printWindow.document.close();
+    // تشغيل الطباعة بعد اكتمال بناء صفحة التقرير في نافذة الطباعة.
+    setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (error) {
+        console.error('Report printing failed:', error);
+        alert('تعذر فتح الطباعة. حاول السماح بالنوافذ المنبثقة ثم أعد المحاولة.');
+      }
+    }, 400);
   });
 
+  const savedReportMode = localStorage.getItem('fp_report_currency_mode') || 'convert';
+  const savedExchangeRate = localStorage.getItem('fp_report_eur_rate');
+  const savedModeRadio = document.querySelector(`input[name="reportCurrencyMode"][value="${savedReportMode}"]`);
+  if (savedModeRadio) savedModeRadio.checked = true;
+  if (savedExchangeRate && Number(savedExchangeRate) > 0) document.getElementById('exchangeRateInput').value = savedExchangeRate;
+  document.querySelectorAll('input[name="reportCurrencyMode"]').forEach(el => el.addEventListener('change', renderReports));
+  document.getElementById('exchangeRateInput').addEventListener('input', renderReports);
   document.getElementById('reportPeriodSelect').addEventListener('change', renderReports);
   document.getElementById('customStartDate').addEventListener('change', renderReports);
   document.getElementById('customEndDate').addEventListener('change', renderReports);
