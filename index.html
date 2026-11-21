@@ -109,6 +109,41 @@
   
   .toast-banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: var(--gold-gradient); color: #0b0d12; padding: 8px 16px; border-radius: 10px; font-weight: 900; font-size: 0.8rem; z-index: 999; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.7); white-space: nowrap; }
   .toast-banner.show { display: flex; }
+
+  @media print {
+    @page { size: auto; margin: 12mm; }
+    html, body {
+      display: block !important; width: 100% !important; min-height: 0 !important;
+      height: auto !important; overflow: visible !important; background: #fff !important;
+      color: #111 !important;
+    }
+    body { justify-content: flex-start !important; align-items: flex-start !important; }
+    .phone-frame {
+      display: block !important; width: 100% !important; max-width: none !important;
+      height: auto !important; max-height: none !important; overflow: visible !important;
+      border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+      background: #fff !important;
+    }
+    .app-header, .nav-bar, .toast-banner, #receiptModal, .no-print { display: none !important; }
+    .main-content { display: block !important; overflow: visible !important; padding: 0 !important; }
+    .view-section { display: none !important; height: auto !important; overflow: visible !important; }
+    #view-reports {
+      display: flex !important; height: auto !important; overflow: visible !important;
+      color: #111 !important; background: #fff !important;
+    }
+    #view-reports .panel-box {
+      background: #fff !important; color: #111 !important;
+      border: 1px solid #bbb !important; box-shadow: none !important;
+      break-inside: avoid; overflow: visible !important;
+    }
+    #view-reports h3, #view-reports h4, #view-reports label,
+    #view-reports span, #view-reports td, #view-reports th,
+    #view-reports div { color: #111 !important; }
+    #view-reports table { width: 100% !important; border-collapse: collapse !important; }
+    #view-reports th, #view-reports td { border: 1px solid #bbb !important; padding: 7px !important; }
+    #view-reports tfoot { font-weight: 800 !important; }
+  }
+
 </style>
 </head>
 <body>
@@ -255,7 +290,7 @@
           </div>
         </div>
 
-        <div id="customDateRangeBox" class="panel-box" style="display:none; grid-template-columns: 1fr 1fr; gap:6px; padding:6px 10px;">
+        <div id="customDateRangeBox" class="panel-box no-print" style="display:none; grid-template-columns: 1fr 1fr; gap:6px; padding:6px 10px;">
           <div>
             <label style="font-size:0.6rem; color:var(--text-muted);">من تاريخ</label>
             <input type="date" id="customStartDate" class="input-field" style="padding:4px 6px; font-size:0.75rem;">
@@ -266,12 +301,12 @@
           </div>
         </div>
 
-        <div class="panel-box" style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px;">
+        <div class="panel-box no-print" style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px;">
           <span style="font-size:0.72rem; font-weight:800; color:var(--gold-light);">سعر صرف اليورو (EUR to EGP):</span>
           <input type="number" id="exchangeRateInput" class="input-field" value="55" step="0.1" style="max-width:80px; text-align:center;">
         </div>
 
-        <div class="panel-box">
+        <div class="panel-box no-print">
           <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;">إدارة العهدة اليومية للدرج</h4>
           <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:6px; align-items:flex-end;">
             <div>
@@ -286,7 +321,7 @@
           </div>
         </div>
 
-        <div class="panel-box">
+        <div class="panel-box no-print">
           <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;">تسجيل المصروفات اليومية</h4>
           <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr auto; gap:5px; align-items:flex-end;">
             <div>
@@ -710,6 +745,54 @@ document.addEventListener('DOMContentLoaded', () => {
     alert('📥 تم سحب الأوردر رقم (' + ord.id + ') وحذفه من قاعدة البيانات، وتم نقله لشاشة الكاشير بنجاح!');
   };
 
+
+  // استرجاع الفاتورة المعلقة تلقائياً عند إدخال رقم الغرفة/الطاولة أو اسم العميل بالكامل.
+  function normalizeOrderLookup(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/ة/g, 'ه')
+      .replace(/[\s\-_#.,:؛،/\\]+/g, '');
+  }
+
+  function findMatchingHeldOrder(value) {
+    const query = normalizeOrderLookup(value);
+    if (!query) return null;
+
+    const exactMatches = state.held.filter(order =>
+      normalizeOrderLookup(order.customer) === query
+    );
+    if (exactMatches.length === 1) return exactMatches[0];
+
+    // يسمح بكتابة الرقم فقط إذا كان فريداً داخل أسماء الأوردرات المعلقة.
+    const queryDigits = query.replace(/\D/g, '');
+    if (queryDigits.length >= 2) {
+      const numberMatches = state.held.filter(order => {
+        const customer = normalizeOrderLookup(order.customer);
+        const customerDigits = customer.replace(/\D/g, '');
+        return customerDigits === queryDigits;
+      });
+      if (numberMatches.length === 1) return numberMatches[0];
+    }
+    return null;
+  }
+
+  let lastAutoLoadedOrderId = null;
+  document.getElementById('customerNameInput').addEventListener('input', function() {
+    const match = findMatchingHeldOrder(this.value);
+    if (!match || match.id === lastAutoLoadedOrderId) return;
+    lastAutoLoadedOrderId = match.id;
+    window.loadHeldOrderToCart(match.id);
+  });
+  document.getElementById('customerNameInput').addEventListener('change', function() {
+    const match = findMatchingHeldOrder(this.value);
+    if (!match || match.id === lastAutoLoadedOrderId) return;
+    lastAutoLoadedOrderId = match.id;
+    window.loadHeldOrderToCart(match.id);
+  });
+
   window.removeHeld = function(id) {
     if (String(id).startsWith('WEB-')) {
       rtdb.ref('pendingOrders/' + id).remove().catch(err => {
@@ -792,6 +875,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('statTotalSalesVal').textContent = `${sumSales.toFixed(2)} EGP`;
     document.getElementById('statNetDrawerVal').textContent = `${(sumCustody + sumSales - sumExpenses).toFixed(2)} EGP`;
   }
+
+
+  document.getElementById('printReportBtn').addEventListener('click', () => {
+    renderReports();
+    window.print();
+  });
 
   document.getElementById('reportPeriodSelect').addEventListener('change', renderReports);
   document.getElementById('customStartDate').addEventListener('change', renderReports);
