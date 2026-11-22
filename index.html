@@ -158,6 +158,16 @@
     #view-reports tfoot { font-weight: 800 !important; }
   }
 
+
+  /* Compact cashier invoice area and inline lookup details */
+  .cart-list-full { flex: 0 1 auto !important; max-height: 30vh; min-height: 54px; }
+  .cart-row-detailed { padding:5px 7px !important; gap:4px !important; border-radius:7px !important; }
+  .cart-row-detailed .item-options-grid { padding:4px !important; gap:3px !important; }
+  .invoice-selected-details { margin-top:6px; padding:9px; border:1px solid var(--border-gold); border-radius:9px; background:var(--bg-panel); max-height:230px; overflow:auto; font-size:.72rem; }
+  .invoice-selected-details .detail-line { display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px solid var(--border-subtle); }
+  .invoice-selected-details .detail-head { color:var(--gold-main); font-weight:900; margin-bottom:5px; }
+  .invoice-selected-details .detail-total { display:flex; justify-content:space-between; font-weight:900; color:var(--gold-main); padding-top:7px; }
+  .lookup-result { padding:5px 7px !important; }
 </style>
 </head>
 <body>
@@ -236,6 +246,7 @@
                 <label>اسم العميل / الطاولة / الغرفة</label>
                 <input type="text" id="customerNameInput" class="input-field" placeholder="ابحث باسم العميل أو رقم الغرفة أو الطاولة">
                 <div id="invoiceLookupResults" class="lookup-results"></div>
+                <div id="invoiceSelectedDetails" class="invoice-selected-details" style="display:none"></div>
               </div>
               <div>
                 <label>طريقة الدفع</label>
@@ -975,14 +986,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const vals=[order.customer,order.customerName,order.name,order.room,order.roomNumber,order.roomNo,order.room_number,order.table,order.tableNumber,order.tableNo,order.table_number,order.roomName,order.tableName,order.id];
     return vals.some(v=>normalizeOrderLookup(v).includes(q));
   }
+  function showInvoiceLookupDetails(kind,id){
+    const host=document.getElementById('invoiceSelectedDetails'); if(!host)return;
+    const o=kind==='held'?state.held.find(x=>String(x.id)===String(id)):state.sales.find(x=>String(x.id)===String(id));
+    if(!o){host.style.display='none';return;}
+    const cart=o.cart||[];
+    const lines=cart.map(c=>{
+      const name=c.name||c.itemName||c.itemId||c.id||'صنف';
+      const qty=Number(c.qty||1), price=Number(c.price||0);
+      return `<div class="detail-line"><span>${escapeHtml(name)} × ${qty}</span><b>${formatMoney(price*qty)}</b></div>`;
+    }).join('');
+    const total=kind==='held'?Number(o.total||cart.reduce((a,c)=>a+Number(c.price||0)*Number(c.qty||1),0)):Number(o.netTotal??o.total??0);
+    host.innerHTML=`<div class="detail-head">${kind==='held'?'⏳ طلب معلق':'✅ فاتورة مدفوعة'} · ${escapeHtml(o.id||'')}</div>
+      <div>العميل / الغرفة / الطاولة: <b>${escapeHtml(o.customer||o.roomName||o.tableName||'—')}</b></div>
+      <div>التاريخ: ${escapeHtml(o.date||'—')} · الحالة: ${escapeHtml(o.orderStatus||o.status||(kind==='held'?'معلق':'مدفوع'))}</div>
+      ${o.orderComment||o.comment?`<div style="margin-top:4px">💬 ${escapeHtml(o.orderComment||o.comment)}</div>`:''}
+      <div style="margin-top:6px">${lines||'لا توجد أصناف مسجلة'}</div>
+      <div class="detail-total"><span>الإجمالي</span><span>${formatMoney(total)}</span></div>
+      ${kind==='held'?`<button class="btn btn-gold" style="margin-top:7px;padding:5px 8px" onclick="loadHeldOrderToCart(${JSON.stringify(String(o.id))},true)">تحميل الطلب للكاشير</button>`:`<button class="btn btn-dark" style="margin-top:7px;padding:5px 8px" onclick="viewSaleInvoice(${JSON.stringify(String(o.id))})">طباعة / عرض الفاتورة</button>`}`;
+    host.style.display='block';
+  }
+  window.showInvoiceLookupDetails=showInvoiceLookupDetails;
   function renderInvoiceLookup(value){
     const host=document.getElementById('invoiceLookupResults'); if(!host)return;
-    const q=normalizeOrderLookup(value); if(q.length<2){host.innerHTML='';return;}
-    const pending=state.held.filter(o=>lookupMatchesOrder(o,q)).slice(0,5);
-    const paid=state.sales.filter(o=>lookupMatchesOrder(o,q)).slice(0,5);
+    const q=normalizeOrderLookup(value); if(q.length<2){host.innerHTML='';const d=document.getElementById('invoiceSelectedDetails');if(d)d.style.display='none';return;}
+    const pending=state.held.filter(o=>lookupMatchesOrder(o,q)).slice(0,8);
+    const paid=state.sales.filter(o=>lookupMatchesOrder(o,q)).slice(0,8);
     const rows=[];
-    pending.forEach(o=>{const lines=(o.cart||[]).map(c=>`${escapeHtml(c.name||c.itemName||c.itemId||c.id||'صنف')} × ${Number(c.qty||1)}`).join('، ');rows.push(`<div class="lookup-result"><b>⏳ ${escapeHtml(o.customer||'طلب معلق')}</b> · ${escapeHtml(o.id)}<div>الحالة: ${escapeHtml(o.status||'pending')} · ${formatMoney(o.total||0)}</div><div style="margin-top:3px">${lines||'لا توجد تفاصيل أصناف'}</div>${o.comment?`<div style="color:var(--gold-light);margin-top:3px">💬 ${escapeHtml(o.comment)}</div>`:''}<button class="btn btn-gold" style="padding:4px 7px;margin-top:4px" onclick="loadHeldOrderToCart('${o.id}',true)">تحميل الطلب للكاشير</button></div>`)});
-    paid.forEach(o=>{const lines=(o.cart||[]).map(c=>`${escapeHtml(c.name||c.itemName||c.itemId||c.id||'صنف')} × ${Number(c.qty||1)}`).join('، ');rows.push(`<div class="lookup-result"><b>✅ ${escapeHtml(o.customer||'فاتورة مدفوعة')}</b> · ${escapeHtml(o.id)}<div>${escapeHtml(o.date||'')} · ${formatMoney(o.netTotal??o.total??0)}</div><div style="margin-top:3px">${lines||'لا توجد تفاصيل أصناف'}</div><button class="btn btn-gold" style="padding:4px 7px;margin-top:4px" onclick="viewSaleInvoice('${o.id}')">عرض الفاتورة كاملة</button></div>`)});
+    pending.forEach(o=>{rows.push(`<div class="lookup-result"><b>⏳ ${escapeHtml(o.customer||'طلب معلق')}</b> · ${escapeHtml(o.id)}<div>معلق · ${formatMoney(o.total||0)}</div><button class="btn btn-gold" style="padding:4px 7px;margin-top:4px" onclick="showInvoiceLookupDetails('held',${JSON.stringify(String(o.id))})">عرض الأصناف والتفاصيل</button></div>`)});
+    paid.forEach(o=>{rows.push(`<div class="lookup-result"><b>✅ ${escapeHtml(o.customer||'فاتورة مدفوعة')}</b> · ${escapeHtml(o.id)}<div>${escapeHtml(o.date||'')} · ${formatMoney(o.netTotal??o.total??0)}</div><button class="btn btn-gold" style="padding:4px 7px;margin-top:4px" onclick="showInvoiceLookupDetails('sale',${JSON.stringify(String(o.id))})">عرض الأصناف والتفاصيل</button></div>`)});
     host.innerHTML=rows.join('')||'<div class="lookup-result">لا توجد فاتورة أو طلب مطابق</div>';
   }
   window.showHeldOrderDetails=function(id){
