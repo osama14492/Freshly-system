@@ -45,6 +45,17 @@
   .app-header { background: var(--bg-panel); border-bottom: 1px solid var(--border-gold); padding: 8px 12px; flex-shrink: 0; }
   .header-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
   .brand-box { display: flex; align-items: center; gap: 8px; }
+  .brand-logo { width:42px;height:42px;flex:0 0 42px;filter:drop-shadow(0 2px 5px rgba(212,175,55,.25)); }
+  .backup-strip { display:flex; gap:6px; margin-top:8px; }
+  .backup-strip .btn { flex:1; padding:6px 5px; font-size:.68rem; }
+  .lookup-results { display:flex; flex-direction:column; gap:5px; max-height:180px; overflow:auto; margin-top:5px; }
+  .lookup-result { background:var(--bg-card);border:1px solid var(--border-gold);border-radius:8px;padding:7px;font-size:.72rem; }
+  .status-pill { display:inline-block;border-radius:20px;padding:3px 7px;font-size:.62rem;font-weight:800;background:#263244;color:#fff; }
+  .status-board { display:flex;flex-direction:column;gap:5px;max-height:145px;overflow:auto; }
+  .company-print-head { text-align:center; margin:0 0 14px; padding-bottom:10px; border-bottom:2px solid #b58b2b; }
+  .company-print-head .mark { font-size:22px;font-weight:900;letter-spacing:1px;color:#9b7625; }
+  .company-print-head .sub { font-size:12px;color:#444; }
+  .company-print-head .details { font-size:11px;color:#444;margin-top:5px; }
   .brand-title { font-size: 0.95rem; font-weight: 900; background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 0.5px; }
   .brand-sub { font-size: 0.58rem; color: var(--text-muted); letter-spacing: 1px; }
 
@@ -173,26 +184,14 @@
       </div>
     </div>
 
-    <!-- نافذة اختيار الأصناف من قائمة المنتجات -->
-    <div id="itemPickerModal" class="modal-overlay">
-      <div class="modal-content">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-          <strong style="color:var(--gold-main);">🛍️ اختيار صنف للفاتورة</strong>
-          <button class="btn btn-danger" style="padding:4px 8px;" onclick="closeItemPicker()">✕ إغلاق</button>
-        </div>
-        <input id="itemSearchInput" class="input-field" type="search" placeholder="ابحث عن اسم الصنف...">
-        <div id="itemPickerList" style="display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow:auto;"></div>
-        <button class="btn btn-dark" onclick="addNewCatalogItem()">➕ إضافة صنف جديد للقائمة</button>
-      </div>
-    </div>
-
     <!-- Header -->
     <header class="app-header">
       <div class="header-top">
         <div class="brand-box">
+          <svg class="brand-logo" viewBox="0 0 100 100" role="img" aria-label="FRESHLY logo"><defs><linearGradient id="goldLogo" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff3a6"/><stop offset=".5" stop-color="#d4af37"/><stop offset="1" stop-color="#9c6d16"/></linearGradient></defs><path d="M36 16h28l-4 49H40z" fill="none" stroke="url(#goldLogo)" stroke-width="5" stroke-linejoin="round"/><path d="M31 28h38M50 16V8l18-5" fill="none" stroke="url(#goldLogo)" stroke-width="5" stroke-linecap="round"/><path d="M44 77c-13-15-24-8-24-8 3 15 14 19 24 8zm5 0c13-15 24-8 24-8-3 15-14 19-24 8z" fill="url(#goldLogo)"/><text x="50" y="96" text-anchor="middle" font-size="10" font-weight="900" fill="url(#goldLogo)">FRESHLY</text></svg>
           <div>
-            <div class="brand-title" id="brandTitle">FRESHLY &amp; PREMIER</div>
-            <div class="brand-sub" id="brandSubtitle">PREMIER BEVERIDGE CO</div>
+            <div class="brand-title">FRESHLY &amp; PREMIER</div>
+            <div class="brand-sub">PREMIER BEVERIDGE CO</div>
           </div>
         </div>
 
@@ -211,8 +210,12 @@
               <option value="EUR">🇪🇺 EUR</option>
             </select>
           </div>
-          <span id="firebaseStatus" style="font-size:.56rem;color:var(--text-muted);white-space:nowrap;">جاري الاتصال</span>
         </div>
+      </div>
+      <div class="backup-strip no-print">
+        <button class="btn btn-dark" id="exportBackupBtn">⬇️ نسخة احتياطية</button>
+        <button class="btn btn-dark" id="importBackupBtn">⬆️ استعادة نسخة</button>
+        <input type="file" id="backupFileInput" accept="application/json,.json" hidden>
       </div>
     </header>
 
@@ -225,13 +228,14 @@
           <div class="cart-panel-full">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
               <span style="font-size:0.88rem; font-weight:900; color:var(--gold-main);">تفاصيل الفاتورة الشاملة</span>
-              <button class="btn btn-dark" style="padding:4px 8px; font-size:0.7rem;" onclick="openItemPicker()">➕ اختيار صنف</button>
+              <button class="btn btn-dark" style="padding:4px 8px; font-size:0.7rem;" onclick="addItemPrompt()">➕ إضافة صنف</button>
             </div>
 
             <div class="invoice-meta-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:6px;">
               <div>
                 <label>اسم العميل / الطاولة / الغرفة</label>
-                <input type="text" id="customerNameInput" class="input-field" placeholder="مثال: غرفة 302 أو الطاولة 4">
+                <input type="text" id="customerNameInput" class="input-field" placeholder="ابحث باسم العميل أو رقم الغرفة أو الطاولة">
+                <div id="invoiceLookupResults" class="lookup-results"></div>
               </div>
               <div>
                 <label>طريقة الدفع</label>
@@ -244,6 +248,10 @@
               </div>
             </div>
 
+            <div class="panel-box" style="padding:7px;margin-bottom:6px;flex-shrink:0;">
+              <div style="font-size:.72rem;font-weight:900;color:var(--gold-main);margin-bottom:5px;">📍 متابعة حالة الطلبات</div>
+              <div id="homeOrderStatusBoard" class="status-board"><div class="cart-empty" style="padding:4px">لا توجد طلبات نشطة</div></div>
+            </div>
             <div style="margin-bottom: 6px;">
               <label style="font-size:0.62rem; color:var(--text-muted); display:block; margin-bottom:2px;">التاريخ</label>
               <input type="date" id="saleDateInput" class="input-field">
@@ -406,6 +414,18 @@
             <input type="text" id="settingSubtitle" class="input-field" value="PREMIER BEVERIDGE CO">
           </div>
           
+          <div>
+            <label style="font-size:0.68rem; color:var(--text-muted);">عنوان الشركة</label>
+            <input type="text" id="settingCompanyAddress" class="input-field" placeholder="العنوان بالتفصيل">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div><label style="font-size:0.68rem;color:var(--text-muted);">هاتف الشركة</label><input type="text" id="settingCompanyPhone" class="input-field" placeholder="رقم الهاتف"></div>
+            <div><label style="font-size:0.68rem;color:var(--text-muted);">البريد الإلكتروني</label><input type="text" id="settingCompanyEmail" class="input-field" placeholder="البريد الإلكتروني"></div>
+          </div>
+          <div>
+            <label style="font-size:0.68rem;color:var(--text-muted);">التذكير بالأوردرات المعلقة</label>
+            <select id="pendingReminderMinutes" class="input-field"><option value="0">إيقاف التذكير</option><option value="3">كل 3 دقائق</option><option value="5" selected>كل 5 دقائق</option><option value="10">كل 10 دقائق</option><option value="15">كل 15 دقيقة</option></select>
+          </div>
           <!-- إضافة خيار تخصيص ورفع صوت التنبيه من الهاتف -->
           <div style="border-top: 1px solid var(--border-subtle); padding-top:6px; margin-top:4px;">
             <label style="font-size:0.68rem; color:var(--gold-light); display:block; margin-bottom:4px;">🔔 تغيير نغمة تنبيه الأوردرات (اختر ملف صوتي من الموبايل)</label>
@@ -413,20 +433,6 @@
           </div>
 
           <button id="saveSettingsBtn" class="btn btn-gold" style="margin-top:4px;">💾 حفظ الإعدادات</button>
-        </div>
-        <div class="panel-box" style="display:flex;flex-direction:column;gap:8px;">
-          <h4 style="color:var(--gold-light);font-size:.82rem;">📦 إدارة الأصناف والأسعار</h4>
-          <small style="color:var(--text-muted);font-size:.66rem;">يتم تجهيز قائمة الأصناف من كتالوج المنيو الإلكتروني، مع الاحتفاظ بالأصناف المضافة وتعديلات الأسعار على هذا الجهاز.</small>
-          <div id="itemsManagementList" style="display:flex;flex-direction:column;gap:6px;"></div>
-          <button id="syncMenuCatalogBtn" class="btn btn-dark">🔄 تحديث الأصناف من المنيو على هذا الجهاز</button>
-          <button class="btn btn-gold" onclick="addNewCatalogItem()">➕ إضافة صنف جديد</button>
-        </div>
-        <div class="panel-box" style="display:flex;flex-direction:column;gap:8px;">
-          <h4 style="color:var(--gold-light);font-size:.82rem;">🛡️ النسخ الاحتياطي واستعادة البيانات</h4>
-          <small style="color:var(--text-muted);font-size:.68rem;">يشمل الأصناف والمبيعات والفواتير المعلقة والعهدة والمصروفات والإعدادات.</small>
-          <button id="exportBackupBtn" class="btn btn-dark">⬇️ تصدير نسخة احتياطية</button>
-          <input id="restoreBackupInput" type="file" accept="application/json,.json" class="input-field">
-          <button id="restoreBackupBtn" class="btn btn-dark">⬆️ استعادة نسخة احتياطية</button>
         </div>
       </section>
 
@@ -455,1646 +461,40 @@
   appId: "1:92150322225:web:ced60779ef510197863110",
   measurementId: "G-E4CRKEHSXF"
 };
-  let rtdb = null;
-  try {
-    if (window.firebase && firebase.database) {
-      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-      rtdb = firebase.database();
-    }
-  } catch (firebaseInitError) { console.error('Firebase unavailable; local cashier mode enabled:', firebaseInitError); }
+  if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  const rtdb = firebase.database();
 
 document.addEventListener('DOMContentLoaded', () => {
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // قائمة المنتجات الأساسية مأخوذة من كتالوج المنيو الإلكتروني (112 صنفًا).
-  // يتم دمج تعديلات المستخدم المحفوظة محليًا مع الاحتفاظ بالأصناف المخصصة.
   const DEFAULT_ITEMS = [
-  {
-    "id": "ms_mango",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : مانجو",
-      "en": "Milkshake : Mango",
-      "de": "Milchshake : Mango",
-      "fr": "Milkshake : Mangue",
-      "ru": "Милкшейк : Манго"
-    }
-  },
-  {
-    "id": "ms_strawberry",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : فراولة",
-      "en": "Milkshake : Strawberry",
-      "de": "Milchshake : Erdbeere",
-      "fr": "Milkshake : Fraise",
-      "ru": "Милкшейк : Клубника"
-    }
-  },
-  {
-    "id": "ms_chocolate",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : شيكولاتة",
-      "en": "Milkshake : Chocolate",
-      "de": "Milchshake : Schokolade",
-      "fr": "Milkshake : Chocolat",
-      "ru": "Милкшейк : Шоколад"
-    }
-  },
-  {
-    "id": "ms_caramel",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : كراميل",
-      "en": "Milkshake : Caramel",
-      "de": "Milchshake : Karamell",
-      "fr": "Milkshake : Caramel",
-      "ru": "Милкшейк : Карамель"
-    }
-  },
-  {
-    "id": "ms_oreo",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : اوريو",
-      "en": "Milkshake : Oreo",
-      "de": "Milchshake : Oreo",
-      "fr": "Milkshake : Oreo",
-      "ru": "Милкшейк : Орео"
-    }
-  },
-  {
-    "id": "ms_passion",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : باشون فروت",
-      "en": "Milkshake : Passion Fruit",
-      "de": "Milchshake : Maracuja",
-      "fr": "Milkshake : Fruit de la Passion",
-      "ru": "Милкшейк : Маракуйя"
-    }
-  },
-  {
-    "id": "ms_kiwi",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : كيوي",
-      "en": "Milkshake : Kiwi",
-      "de": "Milchshake : Kiwi",
-      "fr": "Milkshake : Kiwi",
-      "ru": "Милкшейк : Киви"
-    }
-  },
-  {
-    "id": "ms_pina",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : بينا كولادا",
-      "en": "Milkshake : Pina Colada",
-      "de": "Milchshake : Pina Colada",
-      "fr": "Milkshake : Pina Colada",
-      "ru": "Милкшейк : Пина Колада"
-    }
-  },
-  {
-    "id": "ms_pineapple",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : أناناس",
-      "en": "Milkshake : Pineapple",
-      "de": "Milchshake : Ananas",
-      "fr": "Milkshake : Ananas",
-      "ru": "Милкшейк : Ананас"
-    }
-  },
-  {
-    "id": "ms_blueberry",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : بلوبيري",
-      "en": "Milkshake : Blueberry",
-      "de": "Milchshake : Blaubeere",
-      "fr": "Milkshake : Myrtille",
-      "ru": "Милкшейк : Черника"
-    }
-  },
-  {
-    "id": "ms_mixberry",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : ميكس بيري",
-      "en": "Milkshake : Mix Berry",
-      "de": "Milchshake : Beerenmix",
-      "fr": "Milkshake : Fruits Rouges",
-      "ru": "Милкшейк : Микс Ягод"
-    }
-  },
-  {
-    "id": "ms_pistachio",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : بستاشيو",
-      "en": "Milkshake : Pistachio",
-      "de": "Milchshake : Pistazie",
-      "fr": "Milkshake : Pistache",
-      "ru": "Милкшейк : Фисташка"
-    }
-  },
-  {
-    "id": "ms_lotus",
-    "categoryId": "milkshake",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "ميلك شيك : لوتس",
-      "en": "Milkshake : Lotus",
-      "de": "Milchshake : Lotus",
-      "fr": "Milkshake : Lotus",
-      "ru": "Милкшейк : Лотус"
-    }
-  },
-  {
-    "id": "ic_pistachio",
-    "categoryId": "iced_coffee",
-    "special": true,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس كوفي : بستاشيو",
-      "en": "Iced Coffee : Pistachio",
-      "de": "Eiskaffee : Pistazie",
-      "fr": "Café Glacé : Pistache",
-      "ru": "Айс Кофе : Фисташка"
-    }
-  },
-  {
-    "id": "ic_caramel_hazelnut",
-    "categoryId": "iced_coffee",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس كوفي : كراميل بندق",
-      "en": "Iced Coffee : Caramel Hazelnut",
-      "de": "Eiskaffee : Karamell-Haselnuss",
-      "fr": "Café Glacé : Caramel Noisette",
-      "ru": "Айс Кофе : Карамель Фундук"
-    }
-  },
-  {
-    "id": "ic_mocha",
-    "categoryId": "iced_coffee",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس كوفي : آيس موكا",
-      "en": "Iced Coffee : Iced Mocha",
-      "de": "Eiskaffee : Eismokka",
-      "fr": "Café Glacé : Mocha Glacé",
-      "ru": "Айс Кофе : Айс Мокка"
-    }
-  },
-  {
-    "id": "ic_hazelnut",
-    "categoryId": "iced_coffee",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس كوفي : بندق",
-      "en": "Iced Coffee : Hazelnut",
-      "de": "Eiskaffee : Haselnuss",
-      "fr": "Café Glacé : Noisette",
-      "ru": "Айс Кофе : Фундук"
-    }
-  },
-  {
-    "id": "ic_caramel",
-    "categoryId": "iced_coffee",
-    "special": true,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس كوفي : كراميل",
-      "en": "Iced Coffee : Caramel",
-      "de": "Eiskaffee : Karamell",
-      "fr": "Café Glacé : Caramel",
-      "ru": "Айс Кофе : Карамель"
-    }
-  },
-  {
-    "id": "ic_classic",
-    "categoryId": "iced_coffee",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس كوفي : كلاسيك",
-      "en": "Iced Coffee : Classic",
-      "de": "Eiskaffee : Klassisch",
-      "fr": "Café Glacé : Classique",
-      "ru": "Айс Кофе : Классик"
-    }
-  },
-  {
-    "id": "ic_latte",
-    "categoryId": "iced_coffee",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس كوفي : آيس لاتيه",
-      "en": "Iced Coffee : Iced Latte",
-      "de": "Eiskaffee : Eis-Latte",
-      "fr": "Café Glacé : Latte Glacé",
-      "ru": "Айс Кофе : Айс Латте"
-    }
-  },
-  {
-    "id": "ic_chocolate",
-    "categoryId": "iced_coffee",
-    "special": true,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس كوفي : شيكولاتة",
-      "en": "Iced Coffee : Chocolate",
-      "de": "Eiskaffee : Schokolade",
-      "fr": "Café Glacé : Chocolat",
-      "ru": "Айс Кофе : Шоколад"
-    }
-  },
-  {
-    "id": "ic_spanish",
-    "categoryId": "iced_coffee",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس كوفي : آيس سبانيش لاتيه",
-      "en": "Iced Coffee : Iced Spanish Latte",
-      "de": "Eiskaffee : Spanischer Eislatte",
-      "fr": "Café Glacé : Latte Espagnol Glacé",
-      "ru": "Айс Кофе : Айс Испанский Латте"
-    }
-  },
-  {
-    "id": "fj_pomegranate",
-    "categoryId": "fresh_juice",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "عصائر فريش : رمان",
-      "en": "Fresh Juices : Pomegranate",
-      "de": "Frische Säfte : Granatapfel",
-      "fr": "Jus Frais : Grenade",
-      "ru": "Свежие соки : Гранат"
-    }
-  },
-  {
-    "id": "fj_apple",
-    "categoryId": "fresh_juice",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "عصائر فريش : تفاح",
-      "en": "Fresh Juices : Apple",
-      "de": "Frische Säfte : Apfel",
-      "fr": "Jus Frais : Pomme",
-      "ru": "Свежие соки : Яблоко"
-    }
-  },
-  {
-    "id": "fj_lemon_mint",
-    "categoryId": "fresh_juice",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "عصائر فريش : ليمون نعناع",
-      "en": "Fresh Juices : Lemon Mint",
-      "de": "Frische Säfte : Zitrone-Minze",
-      "fr": "Jus Frais : Citron Menthe",
-      "ru": "Свежие соки : Лимон Мята"
-    }
-  },
-  {
-    "id": "fj_strawberry",
-    "categoryId": "fresh_juice",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "عصائر فريش : فراولة",
-      "en": "Fresh Juices : Strawberry",
-      "de": "Frische Säfte : Erdbeere",
-      "fr": "Jus Frais : Fraise",
-      "ru": "Свежие соки : Клубника"
-    }
-  },
-  {
-    "id": "fj_mango",
-    "categoryId": "fresh_juice",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "عصائر فريش : مانجو",
-      "en": "Fresh Juices : Mango",
-      "de": "Frische Säfte : Mango",
-      "fr": "Jus Frais : Mangue",
-      "ru": "Свежие соки : Манго"
-    }
-  },
-  {
-    "id": "fj_banana_milk",
-    "categoryId": "fresh_juice",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "عصائر فريش : موز باللبن",
-      "en": "Fresh Juices : Banana with Milk",
-      "de": "Frische Säfte : Banane mit Milch",
-      "fr": "Jus Frais : Banane Lait",
-      "ru": "Свежие соки : Банан с молоком"
-    }
-  },
-  {
-    "id": "fj_watermelon",
-    "categoryId": "fresh_juice",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "عصائر فريش : بطيخ",
-      "en": "Fresh Juices : Watermelon",
-      "de": "Frische Säfte : Wassermelone",
-      "fr": "Jus Frais : Pastèque",
-      "ru": "Свежие соки : Арбуз"
-    }
-  },
-  {
-    "id": "fj_orange",
-    "categoryId": "fresh_juice",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "عصائر فريش : برتقال",
-      "en": "Fresh Juices : Orange",
-      "de": "Frische Säfte : Orange",
-      "fr": "Jus Frais : Orange",
-      "ru": "Свежие соки : Апельсин"
-    }
-  },
-  {
-    "id": "fj_cantaloupe",
-    "categoryId": "fresh_juice",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "عصائر فريش : كانتلوب",
-      "en": "Fresh Juices : Cantaloupe",
-      "de": "Frische Säfte : Melone",
-      "fr": "Jus Frais : Melon",
-      "ru": "Свежие соки : Дыня"
-    }
-  },
-  {
-    "id": "fp_small",
-    "categoryId": "fruit_platters",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "اطباق فاكهة فريش : طبق صغير",
-      "en": "Fruit Platters : Small Plate",
-      "de": "Obstteller : Kleiner Teller",
-      "fr": "Assiettes Fruits : Petite Assiette",
-      "ru": "Фруктовые тарелки : Маленькая тарелка"
-    }
-  },
-  {
-    "id": "fp_medium",
-    "categoryId": "fruit_platters",
-    "special": false,
-    "priceEGP": 450,
-    "priceEUR": 7,
-    "names": {
-      "ar": "اطباق فاكهة فريش : طبق وسط",
-      "en": "Fruit Platters : Medium Plate",
-      "de": "Obstteller : Mittlerer Teller",
-      "fr": "Assiettes Fruits : Assiette Moyenne",
-      "ru": "Фруктовые тарелки : Средняя тарелка"
-    }
-  },
-  {
-    "id": "fp_large",
-    "categoryId": "fruit_platters",
-    "special": true,
-    "priceEGP": 600,
-    "priceEUR": 10,
-    "names": {
-      "ar": "اطباق فاكهة فريش : طبق كبير",
-      "en": "Fruit Platters : Large Plate",
-      "de": "Obstteller : Großer Teller",
-      "fr": "Assiettes Fruits : Grande Assiette",
-      "ru": "Фруктовые тарелки : Большая тарелка"
-    }
-  },
-  {
-    "id": "mc_blueberry",
-    "categoryId": "matcha",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الماتشا : بلوبيري",
-      "en": "Matcha : Blueberry",
-      "de": "Matcha : Blaubeere",
-      "fr": "Matcha : Myrtille",
-      "ru": "Матча : Черника"
-    }
-  },
-  {
-    "id": "mc_coconut",
-    "categoryId": "matcha",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الماتشا : جوز هند",
-      "en": "Matcha : Coconut",
-      "de": "Matcha : Kokosnuss",
-      "fr": "Matcha : Noix de Coco",
-      "ru": "Матча : Кокос"
-    }
-  },
-  {
-    "id": "mc_mango",
-    "categoryId": "matcha",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الماتشا : مانجو",
-      "en": "Matcha : Mango",
-      "de": "Matcha : Mango",
-      "fr": "Matcha : Mangue",
-      "ru": "Матча : Манго"
-    }
-  },
-  {
-    "id": "mc_classic",
-    "categoryId": "matcha",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الماتشا : كلاسيك",
-      "en": "Matcha : Classic",
-      "de": "Matcha : Klassisch",
-      "fr": "Matcha : Classique",
-      "ru": "Матча : Классик"
-    }
-  },
-  {
-    "id": "mc_strawberry",
-    "categoryId": "matcha",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الماتشا : فراولة",
-      "en": "Matcha : Strawberry",
-      "de": "Matcha : Erdbeere",
-      "fr": "Matcha : Fraise",
-      "ru": "Матча : Клубника"
-    }
-  },
-  {
-    "id": "mc_pistachio",
-    "categoryId": "matcha",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الماتشا : بستاشيو",
-      "en": "Matcha : Pistachio",
-      "de": "Matcha : Pistazie",
-      "fr": "Matcha : Pistache",
-      "ru": "Матча : Фисташка"
-    }
-  },
-  {
-    "id": "mc_caramel",
-    "categoryId": "matcha",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الماتشا : كراميل",
-      "en": "Matcha : Caramel",
-      "de": "Matcha : Karamell",
-      "fr": "Matcha : Caramel",
-      "ru": "Матча : Карамель"
-    }
-  },
-  {
-    "id": "mc_vanilla",
-    "categoryId": "matcha",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الماتشا : فانيليا",
-      "en": "Matcha : Vanilla",
-      "de": "Matcha : Vanille",
-      "fr": "Matcha : Vanille",
-      "ru": "Матча : Ваниль"
-    }
-  },
-  {
-    "id": "mc_espresso",
-    "categoryId": "matcha",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الماتشا : اسبريسو",
-      "en": "Matcha : Espresso",
-      "de": "Matcha : Espresso",
-      "fr": "Matcha : Expresso",
-      "ru": "Матча : Эспрессо"
-    }
-  },
-  {
-    "id": "fr_caramel_cookies",
-    "categoryId": "frappe",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "فرابيه : كراميل كوكيز",
-      "en": "Frappe : Caramel Cookies",
-      "de": "Frappé : Karamell-Cookies",
-      "fr": "Frappé : Cookies Caramel",
-      "ru": "Фраппе : Карамель Печенье"
-    }
-  },
-  {
-    "id": "fr_oreo",
-    "categoryId": "frappe",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "فرابيه : اوريو",
-      "en": "Frappe : Oreo",
-      "de": "Frappé : Oreo",
-      "fr": "Frappé : Oreo",
-      "ru": "Фраппе : Орео"
-    }
-  },
-  {
-    "id": "fr_hazelnut",
-    "categoryId": "frappe",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "فرابيه : بندق",
-      "en": "Frappe : Hazelnut",
-      "de": "Frappé : Haselnuss",
-      "fr": "Frappé : Noisette",
-      "ru": "Фраппе : Фундук"
-    }
-  },
-  {
-    "id": "fr_lotus",
-    "categoryId": "frappe",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "فرابيه : لوتس",
-      "en": "Frappe : Lotus",
-      "de": "Frappé : Lotus",
-      "fr": "Frappé : Lotus",
-      "ru": "Фраппе : Лотус"
-    }
-  },
-  {
-    "id": "fr_classic",
-    "categoryId": "frappe",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "فرابيه : كلاسيك",
-      "en": "Frappe : Classic",
-      "de": "Frappé : Klassisch",
-      "fr": "Frappé : Classique",
-      "ru": "Фраппе : Классик"
-    }
-  },
-  {
-    "id": "fr_caramel",
-    "categoryId": "frappe",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "فرابيه : كراميل",
-      "en": "Frappe : Caramel",
-      "de": "Frappé : Karamell",
-      "fr": "Frappé : Caramel",
-      "ru": "Фраппе : Карамель"
-    }
-  },
-  {
-    "id": "fr_choc_hazelnut",
-    "categoryId": "frappe",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "فرابيه : شيكولاتة بندق",
-      "en": "Frappe : Chocolate Hazelnut",
-      "de": "Frappé : Schoko-Haselnuss",
-      "fr": "Frappé : Chocolat Noisette",
-      "ru": "Фраппе : Шоколад Фундук"
-    }
-  },
-  {
-    "id": "fr_chocolate",
-    "categoryId": "frappe",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "فرابيه : شيكولاتة",
-      "en": "Frappe : Chocolate",
-      "de": "Frappé : Schokolade",
-      "fr": "Frappé : Chocolat",
-      "ru": "Фраппе : Шоколад"
-    }
-  },
-  {
-    "id": "fr_pistachio",
-    "categoryId": "frappe",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "فرابيه : بستاشيو",
-      "en": "Frappe : Pistachio",
-      "de": "Frappé : Pistazie",
-      "fr": "Frappé : Pistache",
-      "ru": "Фраппе : Фисташка"
-    }
-  },
-  {
-    "id": "it_peach",
-    "categoryId": "iced_tea",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس تي : خوخ",
-      "en": "Iced Tea : Peach",
-      "de": "Eistee : Pfirsich",
-      "fr": "Thé Glacé : Pêche",
-      "ru": "Айс Ти : Персик"
-    }
-  },
-  {
-    "id": "it_passion",
-    "categoryId": "iced_tea",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس تي : باشون فروت",
-      "en": "Iced Tea : Passion Fruit",
-      "de": "Eistee : Maracuja",
-      "fr": "Thé Glacé : Fruit de la Passion",
-      "ru": "Айс Ти : Маракуйя"
-    }
-  },
-  {
-    "id": "it_orange",
-    "categoryId": "iced_tea",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس تي : برتقال",
-      "en": "Iced Tea : Orange",
-      "de": "Eistee : Orange",
-      "fr": "Thé Glacé : Orange",
-      "ru": "Айс Ти : Апельсин"
-    }
-  },
-  {
-    "id": "it_strawberry",
-    "categoryId": "iced_tea",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس تي : فراولة",
-      "en": "Iced Tea : Strawberry",
-      "de": "Eistee : Erdbeere",
-      "fr": "Thé Glacé : Fraise",
-      "ru": "Айс Ти : Клубника"
-    }
-  },
-  {
-    "id": "it_blueberry",
-    "categoryId": "iced_tea",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس تي : بلوبيري",
-      "en": "Iced Tea : Blueberry",
-      "de": "Eistee : Blaubeere",
-      "fr": "Thé Glacé : Myrtille",
-      "ru": "Айс Ти : Черника"
-    }
-  },
-  {
-    "id": "it_mango",
-    "categoryId": "iced_tea",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس تي : مانجو",
-      "en": "Iced Tea : Mango",
-      "de": "Eistee : Mango",
-      "fr": "Thé Glacé : Mangue",
-      "ru": "Айс Ти : Манго"
-    }
-  },
-  {
-    "id": "it_classic",
-    "categoryId": "iced_tea",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس تي : كلاسيك",
-      "en": "Iced Tea : Classic",
-      "de": "Eistee : Klassisch",
-      "fr": "Thé Glacé : Classique",
-      "ru": "Айс Ти : Классик"
-    }
-  },
-  {
-    "id": "it_apple",
-    "categoryId": "iced_tea",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس تي : تفاح",
-      "en": "Iced Tea : Apple",
-      "de": "Eistee : Apfel",
-      "fr": "Thé Glacé : Pomme",
-      "ru": "Айс Ти : Яблоко"
-    }
-  },
-  {
-    "id": "it_lemon",
-    "categoryId": "iced_tea",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "آيس تي : ليمون",
-      "en": "Iced Tea : Lemon",
-      "de": "Eistee : Zitrone",
-      "fr": "Thé Glacé : Citron",
-      "ru": "Айс Ти : Лимон"
-    }
-  },
-  {
-    "id": "sm_lemon_mint",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : ليمون نعناع",
-      "en": "Smoothie : Lemon Mint",
-      "de": "Smoothie : Zitrone-Minze",
-      "fr": "Smoothie : Citron Menthe",
-      "ru": "Смузи : Лимон Мята"
-    }
-  },
-  {
-    "id": "sm_banana",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : موز",
-      "en": "Smoothie : Banana",
-      "de": "Smoothie : Banane",
-      "fr": "Smoothie : Banane",
-      "ru": "Смузи : Банан"
-    }
-  },
-  {
-    "id": "sm_mango",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : مانجو",
-      "en": "Smoothie : Mango",
-      "de": "Smoothie : Mango",
-      "fr": "Smoothie : Mangue",
-      "ru": "Смузи : Манго"
-    }
-  },
-  {
-    "id": "sm_watermelon",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : بطيخ",
-      "en": "Smoothie : Watermelon",
-      "de": "Smoothie : Wassermelone",
-      "fr": "Smoothie : Pastèque",
-      "ru": "Смузи : Арбуз"
-    }
-  },
-  {
-    "id": "sm_cantaloupe",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : كانتلوب",
-      "en": "Smoothie : Cantaloupe",
-      "de": "Smoothie : Melone",
-      "fr": "Smoothie : Melon",
-      "ru": "Смузи : Дыня"
-    }
-  },
-  {
-    "id": "sm_passion",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : باشون فروت",
-      "en": "Smoothie : Passion Fruit",
-      "de": "Smoothie : Maracuja",
-      "fr": "Smoothie : Fruit de la Passion",
-      "ru": "Смузи : Маракуйя"
-    }
-  },
-  {
-    "id": "sm_strawberry",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : فراولة",
-      "en": "Smoothie : Strawberry",
-      "de": "Smoothie : Erdbeere",
-      "fr": "Smoothie : Fraise",
-      "ru": "Смузи : Клубника"
-    }
-  },
-  {
-    "id": "sm_blueberry",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : بلوبيري",
-      "en": "Smoothie : Blueberry",
-      "de": "Smoothie : Blaubeere",
-      "fr": "Smoothie : Myrtille",
-      "ru": "Смузи : Черника"
-    }
-  },
-  {
-    "id": "sm_peach",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : خوخ",
-      "en": "Smoothie : Peach",
-      "de": "Smoothie : Pfirsich",
-      "fr": "Smoothie : Pêche",
-      "ru": "Смузи : Персик"
-    }
-  },
-  {
-    "id": "sm_pineapple",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : أناناس",
-      "en": "Smoothie : Pineapple",
-      "de": "Smoothie : Ananas",
-      "fr": "Smoothie : Ananas",
-      "ru": "Смузи : Ананас"
-    }
-  },
-  {
-    "id": "sm_kiwi_lemon_mint",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : كيوي ليمون نعناع",
-      "en": "Smoothie : Kiwi Lemon Mint",
-      "de": "Smoothie : Kiwi-Zitrone-Minze",
-      "fr": "Smoothie : Kiwi Citron Menthe",
-      "ru": "Смузи : Киви Лимон Мята"
-    }
-  },
-  {
-    "id": "sm_peach_orange",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : خوخ برتقال",
-      "en": "Smoothie : Peach Orange",
-      "de": "Smoothie : Pfirsich-Orange",
-      "fr": "Smoothie : Pêche Orange",
-      "ru": "Смузи : Персик Апельсин"
-    }
-  },
-  {
-    "id": "sm_mixberry",
-    "categoryId": "smoothie",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : ميكس بيري",
-      "en": "Smoothie : Mixberry",
-      "de": "Smoothie : Beeren-Mix-Smoothie",
-      "fr": "Smoothie : Smoothie aux Fruits Rouges",
-      "ru": "Смузи : Миксбери"
-    }
-  },
-  {
-    "id": "sm_taste_of_love",
-    "categoryId": "smoothie",
-    "special": true,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سموزي : تيست اوف لوف",
-      "en": "Smoothie : Taste Of Love",
-      "de": "Smoothie : Geschmack der Liebe",
-      "fr": "Smoothie : Goût de l'Amour",
-      "ru": "Смузи : Вкус любви"
-    }
-  },
-  {
-    "id": "mj_classic",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : كلاسيك",
-      "en": "Mojito : Classic",
-      "de": "Mojito : Klassisch",
-      "fr": "Mojito : Classique",
-      "ru": "Мохито : Классик"
-    }
-  },
-  {
-    "id": "mj_orange",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : برتقال",
-      "en": "Mojito : Orange",
-      "de": "Mojito : Orange",
-      "fr": "Mojito : Orange",
-      "ru": "Мохито : Апельсин"
-    }
-  },
-  {
-    "id": "mj_mango",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : مانجو",
-      "en": "Mojito : Mango",
-      "de": "Mojito : Mango",
-      "fr": "Mojito : Mangue",
-      "ru": "Мохито : Манго"
-    }
-  },
-  {
-    "id": "mj_strawberry",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : فراولة",
-      "en": "Mojito : Strawberry",
-      "de": "Mojito : Erdbeere",
-      "fr": "Mojito : Fraise",
-      "ru": "Мохито : Клубника"
-    }
-  },
-  {
-    "id": "mj_peach",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : خوخ",
-      "en": "Mojito : Peach",
-      "de": "Mojito : Pfirsich",
-      "fr": "Mojito : Pêche",
-      "ru": "Мохито : Персик"
-    }
-  },
-  {
-    "id": "mj_blueberry",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : بلوبيري",
-      "en": "Mojito : Blueberry",
-      "de": "Mojito : Blaubeere",
-      "fr": "Mojito : Myrtille",
-      "ru": "Мохито : Черника"
-    }
-  },
-  {
-    "id": "mj_pineapple",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : أناناس",
-      "en": "Mojito : Pineapple",
-      "de": "Mojito : Ananas",
-      "fr": "Mojito : Ananas",
-      "ru": "Мохито : Ананас"
-    }
-  },
-  {
-    "id": "mj_kiwi",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : كيوي",
-      "en": "Mojito : Kiwi",
-      "de": "Mojito : Kiwi",
-      "fr": "Mojito : Kiwi",
-      "ru": "Мохито : Киви"
-    }
-  },
-  {
-    "id": "mj_blue_ocean",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : بلو اوشن",
-      "en": "Mojito : Blue Ocean",
-      "de": "Mojito : Blue Ocean",
-      "fr": "Mojito : Bleu Océan",
-      "ru": "Мохито : Голубой Океан"
-    }
-  },
-  {
-    "id": "mj_red_bull",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : ريد بول",
-      "en": "Mojito : Red Bull",
-      "de": "Mojito : Red Bull",
-      "fr": "Mojito : Red Bull",
-      "ru": "Мохито : Ред Булл"
-    }
-  },
-  {
-    "id": "mj_red_sea",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : ريد سي",
-      "en": "Mojito : Red Sea Mojito",
-      "de": "Mojito : Rotes Meer Mojito",
-      "fr": "Mojito : Mojito de la Mer Rouge",
-      "ru": "Мохито : Мохито Красное море"
-    }
-  },
-  {
-    "id": "mj_winter_light",
-    "categoryId": "mojito",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "موهيتو : وينتر لايت",
-      "en": "Mojito : Winter light Mojito",
-      "de": "Mojito : Winterlicht-Mojito",
-      "fr": "Mojito : Mojito Lumière d'Hiver",
-      "ru": "Мохито : Зимний свет"
-    }
-  },
-  {
-    "id": "hd_turkish",
-    "categoryId": "hot_drinks",
-    "special": false,
-    "priceEGP": 200,
-    "priceEUR": 3,
-    "names": {
-      "ar": "مشروبات ساخنة : قهوة تركي",
-      "en": "Hot Drinks : Turkish Coffee",
-      "de": "Heißgetränke : Türkischer Kaffee",
-      "fr": "Boissons Chaudes : Café Turc",
-      "ru": "Горячие напитки : Турецкий кофе"
-    }
-  },
-  {
-    "id": "hd_french",
-    "categoryId": "hot_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات ساخنة : قهوة فرنساوي",
-      "en": "Hot Drinks : French Coffee",
-      "de": "Heißgetränke : Französischer Kaffee",
-      "fr": "Boissons Chaudes : Café Français",
-      "ru": "Горячие напитки : Французский кофе"
-    }
-  },
-  {
-    "id": "hd_spanish_latte",
-    "categoryId": "hot_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات ساخنة : سبانيش لاتيه",
-      "en": "Hot Drinks : Spanish Latte",
-      "de": "Heißgetränke : Spanischer Latte",
-      "fr": "Boissons Chaudes : Latte Espagnol",
-      "ru": "Горячие напитки : Испанский латте"
-    }
-  },
-  {
-    "id": "hd_pistachio_latte",
-    "categoryId": "hot_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات ساخنة : بستاشيو لاتيه",
-      "en": "Hot Drinks : Pistachio Latte",
-      "de": "Heißgetränke : Pistazien Latte",
-      "fr": "Boissons Chaudes : Latte Pistache",
-      "ru": "Горячие напитки : Фисташковый латте"
-    }
-  },
-  {
-    "id": "hd_double_macchiato",
-    "categoryId": "hot_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات ساخنة : دبل ميكاتو",
-      "en": "Hot Drinks : Double Macchiato",
-      "de": "Heißgetränke : Doppelter Macchiato",
-      "fr": "Boissons Chaudes : Double Macchiato",
-      "ru": "Горячие напитки : Двойной маккиато"
-    }
-  },
-  {
-    "id": "hd_latte",
-    "categoryId": "hot_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات ساخنة : لاتيه",
-      "en": "Hot Drinks : Caffè Latte",
-      "de": "Heißgetränke : Caffè Latte",
-      "fr": "Boissons Chaudes : Caffè Latte",
-      "ru": "Горячие напитки : Латте"
-    }
-  },
-  {
-    "id": "hd_cappuccino",
-    "categoryId": "hot_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات ساخنة : كابتشينو",
-      "en": "Hot Drinks : Cappuccino",
-      "de": "Heißgetränke : Cappuccino",
-      "fr": "Boissons Chaudes : Cappuccino",
-      "ru": "Горячие напитки : Капучино"
-    }
-  },
-  {
-    "id": "hd_american",
-    "categoryId": "hot_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات ساخنة : امريكان كوفي",
-      "en": "Hot Drinks : American Coffee",
-      "de": "Heißgetränke : Amerikanischer Kaffee",
-      "fr": "Boissons Chaudes : Café Américain",
-      "ru": "Горячие напитки : Американский кофе"
-    }
-  },
-  {
-    "id": "hd_caramel_latte",
-    "categoryId": "hot_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات ساخنة : لاتيه كراميل",
-      "en": "Hot Drinks : Caramel Latte",
-      "de": "Heißgetränke : Karamell Latte",
-      "fr": "Boissons Chaudes : Latte Caramel",
-      "ru": "Горячие напитки : Карамельный латте"
-    }
-  },
-  {
-    "id": "hd_hot_matcha",
-    "categoryId": "hot_drinks",
-    "special": true,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات ساخنة : هوت ماتشا",
-      "en": "Hot Drinks : Hot Matcha",
-      "de": "Heißgetränke : Heisse Matcha",
-      "fr": "Boissons Chaudes : Matcha Chaud",
-      "ru": "Горячие напитки : Горячая матча"
-    }
-  },
-  {
-    "id": "hd_hot_chocolate",
-    "categoryId": "hot_drinks",
-    "special": true,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات ساخنة : شوكولاتة ساخنة",
-      "en": "Hot Drinks : Hot Chocolate",
-      "de": "Heißgetränke : Heisse Schokolade",
-      "fr": "Boissons Chaudes : Chocolat Chaud",
-      "ru": "Горячие напитки : Горячий шоколад"
-    }
-  },
-  {
-    "id": "sd_nescafe_can",
-    "categoryId": "soft_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سوفت درينكس : كانز نسكافيه (متعدد الاطعم)",
-      "en": "Soft Drinks : Nescafe Can (Multi-flavor)",
-      "de": "Softdrinks : Nescafe Dose",
-      "fr": "Boissons Fraîches : Canette Nescafe",
-      "ru": "Напитки : Банка Нескафе"
-    }
-  },
-  {
-    "id": "sd_lipton_can",
-    "categoryId": "soft_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سوفت درينكس : كانز ليبتون آيس تي (متعدد الاطعم)",
-      "en": "Soft Drinks : Lipton Iced Tea Can (Multi-flavor)",
-      "de": "Softdrinks : Lipton Eistee Dose",
-      "fr": "Boissons Fraîches : Canette Lipton Thé Glacé",
-      "ru": "Напитки : Банка Липтона"
-    }
-  },
-  {
-    "id": "sd_redbull_can",
-    "categoryId": "soft_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سوفت درينكس : كانز ريد بول (متعدد الاطعم)",
-      "en": "Soft Drinks : Red Bull Can (Multi-flavor)",
-      "de": "Softdrinks : Red Bull Dose",
-      "fr": "Boissons Fraîches : Canette Red Bull",
-      "ru": "Напитки : Банка Ред Булл"
-    }
-  },
-  {
-    "id": "sd_coke_triple",
-    "categoryId": "soft_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سوفت درينكس : كوكاكولا تريبل زيرو",
-      "en": "Soft Drinks : Coca-Cola Triple Zero",
-      "de": "Softdrinks : Coca-Cola Triple Zero",
-      "fr": "Boissons Fraîches : Coca-Cola Triple Zéro",
-      "ru": "Напитки : Кока-Кола Тройной Зеро"
-    }
-  },
-  {
-    "id": "sd_coke_coffee",
-    "categoryId": "soft_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سوفت درينكس : كوكاكولا كوفي",
-      "en": "Soft Drinks : Coca-Cola Coffee",
-      "de": "Softdrinks : Coca-Cola Kaffee",
-      "fr": "Boissons Fraîches : Coca-Cola Café",
-      "ru": "Напитки : Кока-Кола Кофе"
-    }
-  },
-  {
-    "id": "sd_pepsi_zero",
-    "categoryId": "soft_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سوفت درينكس : بيبسي زيرو",
-      "en": "Soft Drinks : Pepsi Zero",
-      "de": "Softdrinks : Pepsi Zero",
-      "fr": "Boissons Fraîches : Pepsi Zéro",
-      "ru": "Напитки : Пепси Зеро"
-    }
-  },
-  {
-    "id": "sd_pringles",
-    "categoryId": "soft_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "سوفت درينكس : برنجلز (متعدد الاطعم)",
-      "en": "Soft Drinks : Pringles (Multi-flavor)",
-      "de": "Softdrinks : Pringles",
-      "fr": "Boissons Fraîches : Pringles",
-      "ru": "Напитки : Принглс"
-    }
-  },
-  {
-    "id": "ad_brown_sugar",
-    "categoryId": "asian_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات آسيوية : براون شوجر",
-      "en": "Asian Drinks : Brown Sugar Milk Tea",
-      "de": "Asiatische Getränke : Brauner Zucker Milch-Tee",
-      "fr": "Boissons Asiatiques : Thé au Lait Sucre Roux",
-      "ru": "Азиатские напитки : Черный сахар"
-    }
-  },
-  {
-    "id": "ad_milk_tea",
-    "categoryId": "asian_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات آسيوية : ميلك تي",
-      "en": "Asian Drinks : Milk Tea",
-      "de": "Asiatische Getränke : Milch-Tee",
-      "fr": "Boissons Asiatiques : Thé au Lait",
-      "ru": "Азиатские напитки : Молочный чай"
-    }
-  },
-  {
-    "id": "ad_tiger_milk_tea",
-    "categoryId": "asian_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات آسيوية : تايجر ميلك تي",
-      "en": "Asian Drinks : Tiger Milk Tea",
-      "de": "Asiatische Getränke : Tiger Milch-Tee",
-      "fr": "Boissons Asiatiques : Thé au Lait Tigre",
-      "ru": "Азиатские напитки : Тигровый молочный чай"
-    }
-  },
-  {
-    "id": "ad_taro_milk_tea",
-    "categoryId": "asian_drinks",
-    "special": false,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "مشروبات آسيوية : تارو ميلك تي",
-      "en": "Asian Drinks : Taro Milk Tea",
-      "de": "Asiatische Getränke : Taro Milch-Tee",
-      "fr": "Boissons Asiatiques : Thé au Lait Taro",
-      "ru": "Азиатские напитки : Молочный чай Таро"
-    }
-  },
-  {
-    "id": "en_mix_mango",
-    "categoryId": "energy_refresh",
-    "special": true,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الطاقة والانتعاش : انرجي ميكس مانجو",
-      "en": "Energy & Refreshment : Energy Mix Mango",
-      "de": "Energie : Energie-Mix Mango",
-      "fr": "Énergie : Mix Énergie Mangue",
-      "ru": "Энергия : Энерджи микс манго"
-    }
-  },
-  {
-    "id": "en_mix_hazelnut",
-    "categoryId": "energy_refresh",
-    "special": true,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الطاقة والانتعاش : انرجي ميكس بندق",
-      "en": "Energy & Refreshment : Energy Mix Hazelnut",
-      "de": "Energie : Energie-Mix Haselnuss",
-      "fr": "Énergie : Mix Énergie Noisette",
-      "ru": "Энергия : Энерджи микс фундук"
-    }
-  },
-  {
-    "id": "en_mix_classic",
-    "categoryId": "energy_refresh",
-    "special": true,
-    "priceEGP": 300,
-    "priceEUR": 5,
-    "names": {
-      "ar": "الطاقة والانتعاش : انرجي ميكس كلاسيك",
-      "en": "Energy & Refreshment : Energy Mix Classic",
-      "de": "Energie : Energie-Mix Klassisch",
-      "fr": "Énergie : Mix Énergie Classique",
-      "ru": "Энергия : Энерджи микс классик"
-    }
-  }
-];
-
-  function normalizeCatalogItem(item) {
-    return {
-      id: String(item.id),
-      categoryId: item.categoryId || '',
-      special: !!item.special,
-      names: item.names || { ar: item.name || 'صنف', en: item.name || 'Item' },
-      priceEGP: Number(item.priceEGP ?? 0),
-      priceEUR: Number(item.priceEUR ?? 0)
-    };
-  }
-
-  function loadCatalogItems() {
-    const catalog = new Map(DEFAULT_ITEMS.map(item => [String(item.id), normalizeCatalogItem(item)]));
-    const menuSaved = readStoredJSON('fp_public_items_v6', null);
-    const cashierSaved = readStoredJSON('fp_items_v3', null);
-    [menuSaved, cashierSaved].forEach(saved => {
-      if (!Array.isArray(saved)) return;
-      saved.forEach(item => {
-        if (!item || item.id === undefined || item.id === null) return;
-        const key = String(item.id);
-        const previous = catalog.get(key) || {};
-        catalog.set(key, normalizeCatalogItem({ ...previous, ...item, names: item.names || previous.names }));
-      });
-    });
-    return Array.from(catalog.values());
-  }
-
-  function readStoredJSON(key, fallback) {
-    try { const value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
-    catch (error) { console.error('Invalid saved data for', key, error); return fallback; }
-  }
+    { id: 'm1', names: { ar: 'ميلك شيك مانجو فاخر', en: 'Mango Milkshake' }, priceEGP: 350, priceEUR: 7 },
+    { id: 'm2', names: { ar: 'ميلك شيك فراولة', en: 'Strawberry Milkshake' }, priceEGP: 320, priceEUR: 6 },
+    { id: 'c1', names: { ar: 'آيس سبانيش لاتي', en: 'Iced Spanish Latte' }, priceEGP: 300, priceEUR: 6 },
+    { id: 'j1', names: { ar: 'عصير مانجو فريش', en: 'Fresh Mango Juice' }, priceEGP: 250, priceEUR: 5 }
+  ];
 
   function loadState() {
     return {
       lang: localStorage.getItem('fp_lang') || 'ar',
       currency: localStorage.getItem('fp_currency') || 'EGP',
-      items: loadCatalogItems(),
-      sales: readStoredJSON('fp_sales_v3', []),
-      held: readStoredJSON('fp_held_v3', []),
-      custodyByDate: readStoredJSON('fp_custody_v3', { [todayStr]: 1000 }),
-      expensesByDate: readStoredJSON('fp_expenses_v3', {}),
-      companyName: localStorage.getItem('fp_company_name') || 'FRESHLY & PREMIER',
-      companySubtitle: localStorage.getItem('fp_company_subtitle') || 'PREMIER BEVERIDGE CO',
+      items: JSON.parse(localStorage.getItem('fp_items_v3') || JSON.stringify(DEFAULT_ITEMS)),
+      sales: JSON.parse(localStorage.getItem('fp_sales_v3') || '[]'),
+      held: JSON.parse(localStorage.getItem('fp_held_v3') || '[]'),
+      custodyByDate: JSON.parse(localStorage.getItem('fp_custody_v3') || JSON.stringify({ [todayStr]: 1000 })),
+      expensesByDate: JSON.parse(localStorage.getItem('fp_expenses_v3') || '{}'),
       customAlertSound: localStorage.getItem('fp_custom_sound') || 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
       cart: []
     };
   }
 
   let state = loadState();
+  let companySettings = JSON.parse(localStorage.getItem('fp_company_settings_v1') || '{"name":"FRESHLY & PREMIER","subtitle":"PREMIER BEVERIDGE CO","address":"","phone":"","email":"","reminderMinutes":5}');
+  const companyLogoSvg = '<svg viewBox="0 0 100 100" width="48" height="48" aria-label="FRESHLY"><defs><linearGradient id="printGold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff3a6"/><stop offset=".5" stop-color="#d4af37"/><stop offset="1" stop-color="#9c6d16"/></linearGradient></defs><path d="M36 16h28l-4 49H40zM31 28h38M50 16V8l18-5" fill="none" stroke="url(#printGold)" stroke-width="5" stroke-linecap="round"/><path d="M44 77c-13-15-24-8-24-8 3 15 14 19 24 8zm5 0c13-15 24-8 24-8-3 15-14 19-24 8z" fill="url(#printGold)"/></svg>';
 
   function persistState() {
     localStorage.setItem('fp_lang', state.lang);
     localStorage.setItem('fp_currency', state.currency);
-    localStorage.setItem('fp_items_v3', JSON.stringify(state.items));
-    localStorage.setItem('fp_company_name', state.companyName || 'FRESHLY & PREMIER');
-    localStorage.setItem('fp_company_subtitle', state.companySubtitle || 'PREMIER BEVERIDGE CO');
     localStorage.setItem('fp_sales_v3', JSON.stringify(state.sales));
     localStorage.setItem('fp_held_v3', JSON.stringify(state.held));
     localStorage.setItem('fp_custody_v3', JSON.stringify(state.custodyByDate));
@@ -2102,10 +502,10 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('fp_custom_sound', state.customAlertSound);
   }
 
-  function formatMoney(amount, currency = state.currency) {
+  function formatMoney(amount) {
     const num = Number(amount || 0);
     const clean = Number.isInteger(num) ? num.toString() : num.toFixed(2);
-    return currency === 'EGP' ? `${clean} EGP` : `${clean} €`;
+    return state.currency === 'EGP' ? `${clean} EGP` : `${clean} €`;
   }
 
   function getItemTitle(item) {
@@ -2115,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function getUnitPrice(item) {
     if (!item) return 0;
-    return state.currency === 'EGP' ? Number(item.priceEGP ?? 0) : Number(item.priceEUR ?? 0);
+    return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
   }
 
   // **إعداد وتشغيل صوت التنبيه**
@@ -2140,14 +540,14 @@ document.addEventListener('DOMContentLoaded', () => {
         state.customAlertSound = evt.target.result;
         audioPlayer.src = state.customAlertSound;
         persistState();
-        alert('🎵 تم تغيير نغمة التنبيه بنجاح!');
+        alert('🎵 تم تغيير وصفظ نغمة التنبيه بنجاح!');
       };
       reader.readAsDataURL(file);
     }
   });
 
   // **استماع وتحديث فوري للأوردرات القادمة من مجلد pendingOrders في قاعدة البيانات**
-  if (rtdb) rtdb.ref('pendingOrders').on('child_added', (snapshot) => {
+  rtdb.ref('pendingOrders').on('child_added', (snapshot) => {
     const onlineOrder = snapshot.val();
     if (onlineOrder) {
       const orderId = onlineOrder.id || snapshot.key;
@@ -2165,7 +565,10 @@ document.addEventListener('DOMContentLoaded', () => {
           cart: onlineOrder.cart || [],
           total: rawTotal,
           paymentMethod: onlineOrder.paymentMethod || 'كاش',
-          status: onlineOrder.status || 'pending'
+          status: onlineOrder.status || 'pending',
+          comment: onlineOrder.comment || onlineOrder.notes || '',
+          room: onlineOrder.room || onlineOrder.roomNumber || '',
+          table: onlineOrder.table || onlineOrder.tableNumber || ''
         });
         persistState();
         renderHeldOrders();
@@ -2175,21 +578,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // مؤشر حالة الاتصال الفعلي بقاعدة Firebase.
-  const firebaseStatusEl = document.getElementById('firebaseStatus');
-  if (rtdb) {
-    rtdb.ref('.info/connected').on('value', snapshot => {
-      const connected = snapshot.val() === true;
-      firebaseStatusEl.textContent = connected ? '● متصل' : '● غير متصل';
-      firebaseStatusEl.style.color = connected ? 'var(--success)' : 'var(--danger)';
-    });
-  } else {
-    firebaseStatusEl.textContent = '● محلي فقط';
-    firebaseStatusEl.style.color = 'var(--danger)';
-  }
-
   // جلب الأوردرات المعلقة الموجودة مسبقاً داخل مجلد pendingOrders عند فتح التطبيق
-  if (rtdb) rtdb.ref('pendingOrders').once('value', (snapshot) => {
+  rtdb.ref('pendingOrders').once('value', (snapshot) => {
     const allOrders = snapshot.val();
     if (allOrders) {
       Object.keys(allOrders).forEach(key => {
@@ -2209,7 +599,10 @@ document.addEventListener('DOMContentLoaded', () => {
               cart: onlineOrder.cart || [],
               total: rawTotal,
               paymentMethod: onlineOrder.paymentMethod || 'كاش',
-              status: onlineOrder.status || 'pending'
+              status: onlineOrder.status || 'pending',
+              comment: onlineOrder.comment || onlineOrder.notes || '',
+              room: onlineOrder.room || onlineOrder.roomNumber || '',
+              table: onlineOrder.table || onlineOrder.tableNumber || ''
             });
           }
         }
@@ -2219,92 +612,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  window.addItemPrompt = function() { window.openItemPicker(); };
-
-  window.openItemPicker = function() {
-    renderItemPicker();
-    document.getElementById('itemPickerModal').style.display = 'flex';
-    document.getElementById('itemSearchInput').value = '';
-    document.getElementById('itemSearchInput').focus();
-  };
-  window.closeItemPicker = function() { document.getElementById('itemPickerModal').style.display = 'none'; };
-
-  function renderItemPicker(filter = '') {
-    const query = String(filter || '').trim().toLowerCase();
-    const host = document.getElementById('itemPickerList');
-    const matches = state.items.filter(item => {
-      const title = String(getItemTitle(item) || '').toLowerCase();
-      return !query || title.includes(query) || String(item.id).toLowerCase().includes(query);
-    });
-    host.innerHTML = matches.length ? matches.map(item => `
-      <div class="panel-box" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0;padding:8px;">
-        <div style="min-width:0;flex:1;"><b>${getItemTitle(item)}</b><div style="font-size:.68rem;color:var(--text-muted);">${formatMoney(getUnitPrice(item))}</div></div>
-        <button class="btn btn-gold" style="padding:6px 10px;" onclick="addCatalogItemToCart('${String(item.id).replace(/'/g, "\\'")}')">إضافة</button>
-      </div>`).join('') : '<div class="cart-empty">لا توجد أصناف مطابقة. أضف صنفًا جديدًا.</div>';
-  }
-
-  window.addCatalogItemToCart = function(id) {
-    const item = state.items.find(entry => String(entry.id) === String(id));
-    if (!item) return;
-    state.cart.push({ itemId: item.id, qty: 1, size: 'كبير', sugar: 'عادي', ice: 'وسط', note: '' });
+  window.addItemPrompt = function() {
+    const name = prompt("أدخل اسم الصنف:");
+    if (!name) return;
+    const price = Number(prompt("السعر (EGP):", "300") || 300);
+    const id = 'custom_' + Date.now();
+    state.items.push({ id, names: { ar: name, en: name }, priceEGP: price, priceEUR: price / 55 });
+    state.cart.push({ itemId: id, qty: 1, size: 'كبير', sugar: 'عادي', ice: 'وسط', note: '' });
     renderCartFull();
-    window.closeItemPicker();
-  };
-
-  window.addNewCatalogItem = function() {
-    const name = prompt('اسم الصنف:');
-    if (!name || !name.trim()) return;
-    const priceEGP = Number(prompt('السعر بالجنيه المصري:', '100'));
-    if (!Number.isFinite(priceEGP) || priceEGP < 0) return alert('السعر غير صحيح.');
-    const priceEUR = Number(prompt('السعر باليورو:', String((priceEGP / 55).toFixed(2))));
-    if (!Number.isFinite(priceEUR) || priceEUR < 0) return alert('سعر اليورو غير صحيح.');
-    const id = 'item_' + Date.now();
-    state.items.push({ id, names: { ar: name.trim(), en: name.trim() }, priceEGP, priceEUR });
-    persistState(); renderItemPicker(document.getElementById('itemSearchInput')?.value || ''); renderItemsManagement();
-    alert('تم حفظ الصنف في قائمة الأصناف.');
-  };
-
-  function renderItemsManagement() {
-    const host = document.getElementById('itemsManagementList');
-    if (!host) return;
-    host.innerHTML = state.items.map(item => `<div class="panel-box" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0;padding:7px;">
-      <div style="min-width:0;flex:1;"><b>${getItemTitle(item)}</b><div style="font-size:.66rem;color:var(--text-muted);">${formatMoney(Number(item.priceEGP || 0),'EGP')} · ${formatMoney(Number(item.priceEUR || 0),'EUR')}</div></div>
-      <div style="display:flex;gap:4px;"><button class="btn btn-dark" style="padding:5px 7px;" onclick="editCatalogItem('${String(item.id).replace(/'/g, "\\'")}')">تعديل</button><button class="btn btn-danger" style="padding:5px 7px;" onclick="deleteCatalogItem('${String(item.id).replace(/'/g, "\\'")}')">حذف</button></div>
-    </div>`).join('') || '<div class="cart-empty">قائمة الأصناف فارغة</div>';
-  }
-
-  window.syncCatalogFromMenu = function() {
-    const menuItems = readStoredJSON('fp_public_items_v6', null);
-    if (!Array.isArray(menuItems) || !menuItems.length) {
-      return alert('لم أجد قائمة المنيو المحفوظة على نفس الجهاز. تم الاحتفاظ بقائمة الأصناف الحالية دون تغيير.');
-    }
-    const merged = new Map(state.items.map(item => [String(item.id), item]));
-    menuItems.forEach(item => {
-      if (!item || item.id === undefined || item.id === null) return;
-      const old = merged.get(String(item.id)) || {};
-      merged.set(String(item.id), normalizeCatalogItem({ ...old, ...item, names: item.names || old.names }));
-    });
-    state.items = Array.from(merged.values());
-    persistState(); renderItemsManagement(); renderItemPicker(); renderCartFull();
-    alert(`تم تحديث قائمة الأصناف من المنيو (${menuItems.length} صنفًا).`);
-  };
-
-  window.editCatalogItem = function(id) {
-    const item = state.items.find(entry => String(entry.id) === String(id)); if (!item) return;
-    const name = prompt('اسم الصنف:', getItemTitle(item)); if (!name || !name.trim()) return;
-    const egp = Number(prompt('السعر بالجنيه المصري:', String(item.priceEGP ?? 0)));
-    if (!Number.isFinite(egp) || egp < 0) return alert('السعر غير صحيح.');
-    const eur = Number(prompt('السعر باليورو:', String(item.priceEUR ?? 0)));
-    if (!Number.isFinite(eur) || eur < 0) return alert('السعر غير صحيح.');
-    item.names = item.names || {}; item.names.ar = name.trim(); item.names.en = name.trim(); item.priceEGP = egp; item.priceEUR = eur;
-    persistState(); renderItemsManagement(); renderCartFull(); renderItemPicker();
-  };
-
-  window.deleteCatalogItem = function(id) {
-    const item = state.items.find(entry => String(entry.id) === String(id)); if (!item) return;
-    if (!confirm(`حذف الصنف "${getItemTitle(item)}" من قائمة الأصناف؟ لن يتم حذف الصنف من الفواتير القديمة.`)) return;
-    state.items = state.items.filter(entry => String(entry.id) !== String(id));
-    persistState(); renderItemsManagement(); renderItemPicker();
   };
 
   function renderCartFull() {
@@ -2319,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
     list.innerHTML = state.cart.map((c, idx) => {
       const item = state.items.find(i => i.id === c.itemId || i.id === c.id);
       const title = item ? getItemTitle(item) : (c.name || 'صنف من المنيو');
-      const unit = c.priceSnapshot !== undefined ? Number(c.priceSnapshot) : (item ? getUnitPrice(item) : Number(c.price || 0));
+      const unit = item ? getUnitPrice(item) : Number(c.price || 0);
       subtotal += unit * c.qty;
 
       return `
@@ -2355,26 +670,11 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
 
-    const totals = calculateInvoiceTotals(subtotal);
-    document.getElementById('grandTotalDisplay').textContent = formatMoney(totals.grandTotal);
+    const disc = Number(document.getElementById('discountInput').value || 0);
+    const tax = document.getElementById('hideTaxCheckbox').checked ? 0 : Number(document.getElementById('taxInput').value || 0);
+    const total = (subtotal * (1 - disc / 100)) * (1 + tax / 100);
+    document.getElementById('grandTotalDisplay').textContent = formatMoney(total);
   }
-
-  function calculateInvoiceTotals(subtotal) {
-    const discountRate = Math.min(100, Math.max(0, Number(document.getElementById('discountInput').value || 0)));
-    const taxRate = document.getElementById('hideTaxCheckbox').checked ? 0 : Math.min(100, Math.max(0, Number(document.getElementById('taxInput').value || 0)));
-    const discountAmount = subtotal * discountRate / 100;
-    const afterDiscount = Math.max(0, subtotal - discountAmount);
-    const taxAmount = afterDiscount * taxRate / 100;
-    return { subtotal, discountRate, discountAmount, taxRate, taxAmount, grandTotal: afterDiscount + taxAmount };
-  }
-
-  // Inline controls in the original layout call these names directly.
-  window.state = state;
-  window.renderCartFull = renderCartFull;
-  document.getElementById('discountInput').addEventListener('input', renderCartFull);
-  document.getElementById('taxInput').addEventListener('input', renderCartFull);
-  document.getElementById('hideTaxCheckbox').addEventListener('change', renderCartFull);
-  document.getElementById('itemSearchInput').addEventListener('input', e => renderItemPicker(e.target.value));
 
   document.getElementById('checkoutBtn').addEventListener('click', () => {
     if (state.cart.length === 0) return alert('الفاتورة فارغة');
@@ -2382,31 +682,23 @@ document.addEventListener('DOMContentLoaded', () => {
     let subtotal = 0;
     state.cart.forEach(c => {
       const item = state.items.find(i => i.id === c.itemId || i.id === c.id);
-      const unit = c.priceSnapshot !== undefined ? Number(c.priceSnapshot) : (item ? getUnitPrice(item) : Number(c.price || 0));
+      const unit = item ? getUnitPrice(item) : Number(c.price || 0);
       subtotal += unit * c.qty;
     });
 
-    const totals = calculateInvoiceTotals(subtotal);
-    const saleCurrency = state.currency || 'EGP';
-    const saleCart = state.cart.map(c => {
-      const item = state.items.find(i => i.id === c.itemId || i.id === c.id);
-      const unit = c.priceSnapshot !== undefined ? Number(c.priceSnapshot) : (item ? getUnitPrice(item) : Number(c.price || 0));
-      return { ...c, itemId: c.itemId || c.id, name: c.name || (item ? getItemTitle(item) : 'صنف'), price: unit, qty: Number(c.qty || 1) };
-    });
     const sale = {
-      id: 'SALE-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
+      id: 'SALE-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       customer,
+      room: (activeOrderContext||{}).room || '',
+      table: (activeOrderContext||{}).table || '',
+      orderComment: (activeOrderContext||{}).comment || '',
+      orderStatus: activeOrderContext ? 'delivered' : '',
       date: document.getElementById('saleDateInput').value || todayStr,
-      cart: JSON.parse(JSON.stringify(saleCart)),
-      subtotal: totals.subtotal,
-      discountRate: totals.discountRate,
-      discountAmount: totals.discountAmount,
-      taxRate: totals.taxRate,
-      taxAmount: totals.taxAmount,
-      total: totals.grandTotal,
-      netTotal: totals.grandTotal,
-      originalTotal: totals.grandTotal,
-      currency: saleCurrency,
+      cart: JSON.parse(JSON.stringify(state.cart)),
+      total: subtotal,
+      netTotal: subtotal,
+      originalTotal: subtotal,
+      currency: state.currency || 'EGP',
       paymentMethod: document.getElementById('paymentMethodSelect').value,
       cashier: document.getElementById('cashierNameInput').value.trim(),
       createdAt: new Date().toISOString(),
@@ -2416,53 +708,38 @@ document.addEventListener('DOMContentLoaded', () => {
     state.sales.unshift(sale);
     if (activeWebOrderId) {
       const delivered = {status:'delivered', deliveredAt:new Date().toISOString(), updatedAt:new Date().toISOString()};
-      if (rtdb) {
-        rtdb.ref('orderTracking/' + activeWebOrderId).update(delivered).catch(err => console.error('Tracking completion update failed:', err));
-        rtdb.ref('pendingOrders/' + activeWebOrderId).remove().catch(err => console.error('Pending order removal failed:', err));
-      }
+      rtdb.ref('orderTracking/' + activeWebOrderId).update(delivered).catch(err => console.error('Tracking completion update failed:', err));
+      rtdb.ref('pendingOrders/' + activeWebOrderId).remove().catch(err => console.error('Pending order removal failed:', err));
       activeWebOrderId = null;
     }
     if (lastAutoLoadedOrderId) {
       const completedHeldId = lastAutoLoadedOrderId;
       state.held = state.held.filter(order => order.id !== completedHeldId);
-      if (rtdb && String(completedHeldId).startsWith('WEB-')) {
+      if (String(completedHeldId).startsWith('WEB-')) {
         rtdb.ref('pendingOrders/' + completedHeldId).remove().catch(err => console.error('Error completing pending order:', err));
       }
       lastAutoLoadedOrderId = null;
     }
+    activeOrderContext = null;
     persistState();
     showReceiptModal(sale);
     state.cart = [];
     document.getElementById('customerNameInput').value = '';
-    document.getElementById('discountInput').value = '0';
-    document.getElementById('taxInput').value = '0';
     renderCartFull();
     renderReports();
   });
 
   document.getElementById('holdOrderBtn').addEventListener('click', () => {
     if (state.cart.length === 0) return alert('الفاتورة فارغة');
-    const heldSubtotal = state.cart.reduce((sum, c) => {
-      const item = state.items.find(i => i.id === c.itemId || i.id === c.id);
-      return sum + (item ? getUnitPrice(item) : Number(c.price || 0)) * Number(c.qty || 1);
-    }, 0);
-    const heldTotals = calculateInvoiceTotals(heldSubtotal);
     state.held.unshift({
-      id: 'HELD-' + Date.now(),
+      id: 'HELD-' + Math.floor(100 + Math.random() * 900),
       customer: document.getElementById('customerNameInput').value.trim() || 'معلق',
-      date: document.getElementById('saleDateInput').value || todayStr,
-      cart: JSON.parse(JSON.stringify(state.cart.map(c => { const item = state.items.find(i => i.id === c.itemId || i.id === c.id); const unit = c.priceSnapshot !== undefined ? Number(c.priceSnapshot) : (item ? getUnitPrice(item) : Number(c.price || 0)); return { ...c, name: c.name || (item ? getItemTitle(item) : 'صنف'), price: unit, priceSnapshot: unit }; }))),
-      total: heldTotals.grandTotal,
-      currency: state.currency,
-      paymentMethod: document.getElementById('paymentMethodSelect').value,
-      discountRate: heldTotals.discountRate,
-      taxRate: heldTotals.taxRate
+      date: todayStr,
+      cart: [...state.cart],
+      total: 0
     });
     persistState();
     state.cart = [];
-    document.getElementById('customerNameInput').value = '';
-    document.getElementById('discountInput').value = '0';
-    document.getElementById('taxInput').value = '0';
     renderCartFull();
     renderHeldOrders();
     alert('تم تعليق الأوردر بنجاح ⏳');
@@ -2492,6 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <option value="preparing" ${ord.status==='preparing'?'selected':''}>👨‍🍳 قيد التجهيز</option>
               <option value="ready" ${ord.status==='ready'?'selected':''}>✅ جاهز للاستلام</option>
             </select>
+            <input class="input-field" style="margin-top:5px;padding:5px;font-size:.68rem" placeholder="تعليق / ملاحظة الطلب" value="${String(ord.comment||'').replace(/"/g,'&quot;')}" onchange="saveOrderComment('${ord.id}',this.value)">
           </div>
           <div style="display:flex; gap:4px;align-items:center;">
             <button class="btn btn-gold" style="padding:6px 10px; font-size:0.75rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 مراجعة وإتمام</button>
@@ -2509,6 +787,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <div>
             <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">📍 ${ord.customer} (${ord.id})</div>
             <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — المجموع: ${formatMoney(ord.total || 0)}</div>
+            <select aria-label="حالة الطلب" onchange="updateLocalOrderStatus('${ord.id}',this.value)" style="margin-top:5px;background:var(--bg-input);color:var(--gold-light);border:1px solid var(--border-gold);border-radius:5px;padding:4px;font-size:.68rem"><option value="pending" ${(ord.status||'pending')==='pending'?'selected':''}>تم الاستلام</option><option value="preparing" ${ord.status==='preparing'?'selected':''}>قيد التجهيز</option><option value="ready" ${ord.status==='ready'?'selected':''}>جاهز</option><option value="delivered" ${ord.status==='delivered'?'selected':''}>تم التسليم</option></select>
+            <input class="input-field" style="margin-top:5px;padding:5px;font-size:.68rem" placeholder="تعليق / ملاحظة الطلب" value="${String(ord.comment||'').replace(/"/g,'&quot;')}" onchange="saveOrderComment('${ord.id}',this.value)">
           </div>
           <div style="display:flex; gap:4px;">
             <button class="btn btn-gold" style="padding:6px 10px; font-size:0.75rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 مراجعة وإتمام</button>
@@ -2517,31 +797,44 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `).join('');
     }
+    renderHomeOrderStatus();
   }
 
   window.updateOrderTrackingStatus = function(id, status) {
-    const allowed = ['pending','preparing','ready'];
+    const allowed = ['pending','preparing','ready','delivered'];
     if (!allowed.includes(status) || !String(id).startsWith('WEB-')) return;
     const order = state.held.find(o => o.id === id);
     if (order) order.status = status;
     const payload = {status, updatedAt: new Date().toISOString()};
-    if (rtdb) {
-      rtdb.ref('orderTracking/' + id).update(payload).catch(err => console.error('Tracking status update failed:', err));
-      rtdb.ref('pendingOrders/' + id).update(payload).catch(err => console.error('Pending order status update failed:', err));
-    }
+    rtdb.ref('orderTracking/' + id).update(payload).catch(err => console.error('Tracking status update failed:', err));
+    rtdb.ref('pendingOrders/' + id).update(payload).catch(err => console.error('Pending order status update failed:', err));
     renderHeldOrders();
+    renderHomeOrderStatus();
+  };
+
+  window.updateLocalOrderStatus = function(id,status) {
+    const allowed=['pending','preparing','ready','delivered']; if(!allowed.includes(status)) return;
+    const order=state.held.find(o=>o.id===id); if(order){order.status=status;order.updatedAt=new Date().toISOString();persistState();renderHeldOrders();renderHomeOrderStatus();}
+  };
+  window.saveOrderComment = function(id,comment) {
+    const order=state.held.find(o=>o.id===id); if(order){order.comment=String(comment||'').trim();persistState();}
+    if(String(id).startsWith('WEB-')) {
+      const payload={comment:String(comment||'').trim(),updatedAt:new Date().toISOString()};
+      rtdb.ref('orderTracking/'+id).update(payload).catch(()=>{});
+      rtdb.ref('pendingOrders/'+id).update(payload).catch(()=>{});
+    }
+    renderHomeOrderStatus();
   };
 
   window.loadHeldOrderToCart = function(id, keepInPending = false) {
     const ord = state.held.find(o => o.id === id);
     if (!ord) return;
+    activeOrderContext = JSON.parse(JSON.stringify(ord));
     activeWebOrderId = String(id).startsWith('WEB-') ? id : null;
     if (activeWebOrderId && ord.status !== 'ready') {
       const preparing = {status:'preparing', updatedAt:new Date().toISOString()};
-      if (rtdb) {
-        rtdb.ref('orderTracking/' + id).update(preparing).catch(err => console.error('Tracking status update failed:', err));
-        rtdb.ref('pendingOrders/' + id).update(preparing).catch(() => {});
-      }
+      rtdb.ref('orderTracking/' + id).update(preparing).catch(err => console.error('Tracking status update failed:', err));
+      rtdb.ref('pendingOrders/' + id).update(preparing).catch(() => {});
     }
 
     // Keep web orders in Firebase and in the pending list until checkout succeeds.
@@ -2556,7 +849,6 @@ document.addEventListener('DOMContentLoaded', () => {
       sugar: c.sugar || 'عادي',
       ice: c.ice || 'وسط',
       price: Number(c.price || 0),
-      priceSnapshot: c.priceSnapshot !== undefined ? Number(c.priceSnapshot) : Number(c.price || 0),
       note: c.note || ''
     }));
 
@@ -2564,9 +856,6 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('customerNameInput').value = ord.customer;
     }
 
-    if (ord.currency && ['EGP','EUR'].includes(ord.currency)) { state.currency = ord.currency; document.getElementById('currencySelect').value = ord.currency; }
-    if (ord.discountRate !== undefined) document.getElementById('discountInput').value = String(ord.discountRate);
-    if (ord.taxRate !== undefined) document.getElementById('taxInput').value = String(ord.taxRate);
     if (ord.paymentMethod) {
       const paySelect = document.getElementById('paymentMethodSelect');
       if (paySelect) {
@@ -2574,16 +863,20 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Keep every held order until checkout succeeds; loading it must never delete it.
-    lastAutoLoadedOrderId = id;
+    if (String(id).startsWith('WEB-')) {
+      lastAutoLoadedOrderId = id;
+    } else if (!keepInPending) {
+      state.held = state.held.filter(o => o.id !== id);
+      lastAutoLoadedOrderId = null;
+    }
     persistState();
     renderHeldOrders();
     renderCartFull();
     switchTab('pos');
     if (String(id).startsWith('WEB-')) {
       alert('📥 تم تحميل الطلب إلى الفاتورة. سيظل محفوظاً في الطلبات حتى إتمام الدفع.');
-    } else {
-      alert('📥 تم تحميل الأوردر إلى الفاتورة وسيظل محفوظاً حتى إتمام الدفع.');
+    } else if (!keepInPending) {
+      alert('📥 تم تحميل الأوردر إلى شاشة الكاشير بنجاح!');
     }
   };
 
@@ -2640,6 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let lastAutoLoadedOrderId = null;
   let activeWebOrderId = null;
+  let activeOrderContext = null;
   const customerLookupInput = document.getElementById('customerNameInput');
   function autoLoadMatchingHeldOrder() {
     const typedValue = customerLookupInput.value;
@@ -2654,12 +948,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.loadHeldOrderToCart(match.id, true);
     customerLookupInput.value = typedValue;
   }
-  customerLookupInput.addEventListener('input', autoLoadMatchingHeldOrder);
-  customerLookupInput.addEventListener('change', autoLoadMatchingHeldOrder);
+  // البحث يعرض تفاصيل الطلبات والفواتير دون تحميلها تلقائياً إلى سلة البيع.
+  customerLookupInput.removeEventListener('change', autoLoadMatchingHeldOrder);
 
   window.removeHeld = function(id) {
     if (String(id).startsWith('WEB-')) {
-      if (rtdb) rtdb.ref('pendingOrders/' + id).remove().catch(err => {
+      rtdb.ref('pendingOrders/' + id).remove().catch(err => {
         console.error("Error removing order from Firebase:", err);
       });
     }
@@ -2667,6 +961,36 @@ document.addEventListener('DOMContentLoaded', () => {
     persistState();
     renderHeldOrders();
   };
+
+  function renderHomeOrderStatus() {
+    const host=document.getElementById('homeOrderStatusBoard'); if(!host) return;
+    const delivered=state.sales.filter(o=>o.orderStatus==='delivered').slice(0,5).map(o=>({...o,status:'delivered',comment:o.orderComment||'',total:o.netTotal??o.total}));
+    const active=[...state.held,...delivered].sort((a,b)=>String(b.updatedAt||b.createdAt||b.date||'').localeCompare(String(a.updatedAt||a.createdAt||a.date||'')));
+    if(!active.length){host.innerHTML='<div class="cart-empty" style="padding:4px">لا توجد طلبات</div>';return;}
+    const labels={pending:'📥 تم الاستلام',preparing:'👨‍🍳 قيد التجهيز',ready:'✅ جاهز للاستلام',delivered:'📦 تم التسليم'};
+    host.innerHTML=active.slice(0,12).map(o=>`<div class="lookup-result"><div style="display:flex;justify-content:space-between;gap:5px"><b>${escapeHtml(o.customer||o.id)}</b><span class="status-pill">${labels[o.status||'pending']||labels.pending}</span></div><div style="color:var(--text-muted);margin-top:3px">${escapeHtml(o.id)} · ${formatMoney(o.total||0)}</div>${o.comment?`<div style="color:var(--gold-light);margin-top:3px">💬 ${escapeHtml(o.comment)}</div>`:''}</div>`).join('');
+  }
+  function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function lookupMatchesOrder(order,q){
+    const vals=[order.customer,order.customerName,order.name,order.room,order.roomNumber,order.roomNo,order.room_number,order.table,order.tableNumber,order.tableNo,order.table_number,order.roomName,order.tableName,order.id];
+    return vals.some(v=>normalizeOrderLookup(v).includes(q));
+  }
+  function renderInvoiceLookup(value){
+    const host=document.getElementById('invoiceLookupResults'); if(!host)return;
+    const q=normalizeOrderLookup(value); if(q.length<2){host.innerHTML='';return;}
+    const pending=state.held.filter(o=>lookupMatchesOrder(o,q)).slice(0,5);
+    const paid=state.sales.filter(o=>lookupMatchesOrder(o,q)).slice(0,5);
+    const rows=[];
+    pending.forEach(o=>{const lines=(o.cart||[]).map(c=>`${escapeHtml(c.name||c.itemName||c.itemId||c.id||'صنف')} × ${Number(c.qty||1)}`).join('، ');rows.push(`<div class="lookup-result"><b>⏳ ${escapeHtml(o.customer||'طلب معلق')}</b> · ${escapeHtml(o.id)}<div>الحالة: ${escapeHtml(o.status||'pending')} · ${formatMoney(o.total||0)}</div><div style="margin-top:3px">${lines||'لا توجد تفاصيل أصناف'}</div>${o.comment?`<div style="color:var(--gold-light);margin-top:3px">💬 ${escapeHtml(o.comment)}</div>`:''}<button class="btn btn-gold" style="padding:4px 7px;margin-top:4px" onclick="loadHeldOrderToCart('${o.id}',true)">تحميل الطلب للكاشير</button></div>`)});
+    paid.forEach(o=>{const lines=(o.cart||[]).map(c=>`${escapeHtml(c.name||c.itemName||c.itemId||c.id||'صنف')} × ${Number(c.qty||1)}`).join('، ');rows.push(`<div class="lookup-result"><b>✅ ${escapeHtml(o.customer||'فاتورة مدفوعة')}</b> · ${escapeHtml(o.id)}<div>${escapeHtml(o.date||'')} · ${formatMoney(o.netTotal??o.total??0)}</div><div style="margin-top:3px">${lines||'لا توجد تفاصيل أصناف'}</div><button class="btn btn-gold" style="padding:4px 7px;margin-top:4px" onclick="viewSaleInvoice('${o.id}')">عرض الفاتورة كاملة</button></div>`)});
+    host.innerHTML=rows.join('')||'<div class="lookup-result">لا توجد فاتورة أو طلب مطابق</div>';
+  }
+  window.showHeldOrderDetails=function(id){
+    const o=state.held.find(x=>x.id===id);if(!o)return;
+    const lines=(o.cart||[]).map(c=>`${c.name||c.itemName||c.itemId||c.id||'صنف'} × ${c.qty||1} — ${formatMoney(c.price||0)}`).join('\n');
+    alert(`تفاصيل الطلب ${o.id}\nالعميل/الغرفة/الطاولة: ${o.customer||''}\nالتاريخ: ${o.date||''}\nالحالة: ${o.status||'pending'}\nالتعليق: ${o.comment||'لا يوجد'}\n${lines}\nالإجمالي: ${formatMoney(o.total||0)}`);
+  };
+  document.getElementById('customerNameInput').addEventListener('input',e=>renderInvoiceLookup(e.target.value));
 
   function renderSalesHistory() {
     const host = document.getElementById('salesHistoryList');
@@ -2689,8 +1013,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function getSaleById(id) { return state.sales.find(s => s.id === id); }
   window.viewSaleInvoice = function(id) {
     const s = getSaleById(id); if (!s) return;
-    const lines = (s.cart || []).map(c => `${c.name || c.itemName || c.itemId || c.id || 'صنف'} × ${c.qty || 1}`).join('\n');
-    alert(`فاتورة ${s.id}\nالعميل: ${s.customer || ''}\nالتاريخ: ${s.date || ''}\n${lines}\nالإجمالي الأصلي: ${formatMoney(s.originalTotal ?? s.total)}\nالصافي الحالي: ${formatMoney(s.netTotal ?? s.total)}\n${s.cancelled?'ملغاة':''}`);
+    const lines = (s.cart || []).map(c => `${c.name || c.itemName || c.itemId || c.id || 'صنف'} × ${c.qty || 1} — ${formatMoney(c.price || 0)}`).join('\n');
+    alert(`فاتورة ${s.id}\nالعميل/الغرفة/الطاولة: ${s.customer || ''}\nالتاريخ: ${s.date || ''}\nطريقة الدفع: ${s.paymentMethod || ''}\nالكاشير: ${s.cashier || ''}\n${lines}\nالإجمالي الأصلي: ${formatMoney(s.originalTotal ?? s.total)}\nالصافي الحالي: ${formatMoney(s.netTotal ?? s.total)}\n${s.cancelled?'ملغاة':''}`);
   };
   window.editSaleItems = function(id) {
     const s = getSaleById(id); if (!s || s.cancelled) return;
@@ -2707,19 +1031,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!Array.isArray(next) || !next.length) { alert('يجب أن تحتوي الفاتورة على صنف واحد على الأقل. استخدم الإلغاء إذا أردت إلغاء الفاتورة بالكامل.'); return; }
     const valid = next.every(c => c && Number(c.qty) > 0 && Number(c.price) >= 0 && (c.name || c.itemId));
     if (!valid) { alert('تأكد من وجود اسم أو معرف لكل صنف، وكمية أكبر من صفر، وسعر غير سالب.'); return; }
-    const newSubtotal = next.reduce((sum,c) => sum + Number(c.qty) * Number(c.price), 0);
-    const discountRate = Math.min(100, Math.max(0, Number(s.discountRate || 0)));
-    const taxRate = Math.min(100, Math.max(0, Number(s.taxRate || 0)));
-    const discountAmount = newSubtotal * discountRate / 100;
-    const taxAmount = (newSubtotal - discountAmount) * taxRate / 100;
-    const newTotal = newSubtotal - discountAmount + taxAmount;
+    const newTotal = next.reduce((sum,c) => sum + Number(c.qty) * Number(c.price), 0);
     const reason = prompt('سبب تعديل الفاتورة:');
     if (!reason || !reason.trim()) { alert('يجب تسجيل سبب التعديل. لم يتم الحفظ.'); return; }
     if (!s.originalSnapshot) s.originalSnapshot = JSON.parse(JSON.stringify(s));
     const previousTotal = Number(s.netTotal !== undefined ? s.netTotal : s.total || 0);
     s.adjustments = Array.isArray(s.adjustments) ? s.adjustments : [];
     s.adjustments.push({type:'items_edited', reason:reason.trim(), previousCart:JSON.parse(JSON.stringify(s.cart || [])), previousNetTotal:previousTotal, newCart:JSON.parse(JSON.stringify(next)), newTotal, at:new Date().toISOString()});
-    s.cart = next; s.subtotal = newSubtotal; s.discountAmount = discountAmount; s.taxAmount = taxAmount; s.total = newTotal; s.netTotal = newTotal; s.originalTotal = newTotal;
+    s.cart = next; s.total = newTotal; s.netTotal = newTotal;
     persistState(); renderReports(); renderSalesHistory();
     alert('تم تعديل أصناف الفاتورة وإعادة حساب الإجمالي مع حفظ النسخة الأصلية وسجل التعديل.');
   };
@@ -2829,12 +1148,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportSection = document.getElementById('view-reports');
     const printable = reportSection.cloneNode(true);
     printable.querySelectorAll('.no-print').forEach(element => element.remove());
+    const printHead=document.createElement('div'); printHead.className='company-print-head';
+    printHead.innerHTML=`${companyLogoSvg}<div class="mark">${escapeHtml(companySettings.name||'FRESHLY & PREMIER')}</div><div class="sub">${escapeHtml(companySettings.subtitle||'PREMIER BEVERIDGE CO')}</div><div class="details">${escapeHtml(companySettings.address||'')}${companySettings.phone?' · هاتف: '+escapeHtml(companySettings.phone):''}${companySettings.email?' · '+escapeHtml(companySettings.email):''}</div><div style="font-weight:800;margin-top:6px">التقارير المالية والإدارية</div>`;
+    printable.insertBefore(printHead,printable.firstChild);
     const printWindow = window.open('', '_blank');
 
     if (!printWindow) {
       // Android/Chrome may block popups; print the report using the page's dedicated print CSS.
+      const fallbackHead=document.createElement('div');fallbackHead.id='temporaryCompanyPrintHead';fallbackHead.className='company-print-head';fallbackHead.innerHTML=`${companyLogoSvg}<div class="mark">${escapeHtml(companySettings.name||'FRESHLY & PREMIER')}</div><div class="sub">${escapeHtml(companySettings.subtitle||'PREMIER BEVERIDGE CO')}</div><div class="details">${escapeHtml(companySettings.address||'')}${companySettings.phone?' · هاتف: '+escapeHtml(companySettings.phone):''}${companySettings.email?' · '+escapeHtml(companySettings.email):''}</div><div style="font-weight:800;margin-top:6px">التقارير المالية والإدارية</div>`;reportSection.insertBefore(fallbackHead,reportSection.firstChild);
       document.body.classList.add('printing-report-only');
       window.print();
+      setTimeout(()=>fallbackHead.remove(),900);
       setTimeout(() => document.body.classList.remove('printing-report-only'), 800);
       return;
     }
@@ -2847,6 +1171,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <style>
         *{box-sizing:border-box} body{font-family:Arial,Tahoma,sans-serif;color:#111;background:#fff;margin:18px}
         h3,h4{font-size:16px;margin:0 0 12px;color:#111!important}
+        .company-print-head{text-align:center;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid #b58b2b}.company-print-head svg{display:block;margin:0 auto 4px}.company-print-head .mark{font-size:22px;font-weight:900;letter-spacing:1px;color:#9b7625}.company-print-head .sub{font-size:12px;color:#444}.company-print-head .details{font-size:11px;color:#444;margin-top:5px}
         .view-section{display:flex!important;flex-direction:column;gap:10px;height:auto!important}
         .panel-box{display:block;background:#fff!important;color:#111!important;border:1px solid #bbb;border-radius:6px;padding:10px;margin-bottom:8px;overflow:visible!important;break-inside:avoid}
         table{width:100%;border-collapse:collapse;font-size:12px} th,td{border:1px solid #bbb;padding:7px;text-align:right;color:#111!important}
@@ -2865,6 +1190,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }, 400);
   });
+
+  // إعدادات الشركة والتذكير والنسخ الاحتياطي
+  function applyCompanySettings(){
+    document.getElementById('settingCompanyName').value=companySettings.name||'FRESHLY & PREMIER';
+    document.getElementById('settingSubtitle').value=companySettings.subtitle||'PREMIER BEVERIDGE CO';
+    document.getElementById('settingCompanyAddress').value=companySettings.address||'';
+    document.getElementById('settingCompanyPhone').value=companySettings.phone||'';
+    document.getElementById('settingCompanyEmail').value=companySettings.email||'';
+    document.getElementById('pendingReminderMinutes').value=String(companySettings.reminderMinutes??5);
+  }
+  document.getElementById('saveSettingsBtn').addEventListener('click',()=>{
+    companySettings={name:document.getElementById('settingCompanyName').value.trim()||'FRESHLY & PREMIER',subtitle:document.getElementById('settingSubtitle').value.trim(),address:document.getElementById('settingCompanyAddress').value.trim(),phone:document.getElementById('settingCompanyPhone').value.trim(),email:document.getElementById('settingCompanyEmail').value.trim(),reminderMinutes:Number(document.getElementById('pendingReminderMinutes').value||0)};
+    localStorage.setItem('fp_company_settings_v1',JSON.stringify(companySettings));applyReminderSchedule();alert('تم حفظ بيانات الشركة وإعدادات التذكير');
+  });
+  document.getElementById('exportBackupBtn').addEventListener('click',()=>{
+    const keys=['fp_items_v3','fp_sales_v3','fp_held_v3','fp_custody_v3','fp_expenses_v3','fp_lang','fp_currency','fp_custom_sound','fp_report_currency_mode','fp_report_eur_rate','fp_company_settings_v1'];
+    const data={app:'FRESHLY_POS_BACKUP',version:1,createdAt:new Date().toISOString(),data:{}};keys.forEach(k=>{const v=localStorage.getItem(k);if(v!==null)data.data[k]=v;});data.data.fp_items_v3=JSON.stringify(state.items);
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='FRESHLY_POS_BACKUP_'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);
+  });
+  document.getElementById('importBackupBtn').addEventListener('click',()=>document.getElementById('backupFileInput').click());
+  document.getElementById('backupFileInput').addEventListener('change',e=>{
+    const f=e.target.files&&e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{try{const b=JSON.parse(reader.result);if(b.app!=='FRESHLY_POS_BACKUP'||!b.data)throw new Error('invalid');if(!confirm('سيتم استعادة البيانات الموجودة في ملف النسخة الاحتياطية. هل تريد المتابعة؟'))return;Object.entries(b.data).forEach(([k,v])=>localStorage.setItem(k,v));alert('تمت الاستعادة. سيتم إعادة تحميل الكاشير.');location.reload();}catch(err){alert('ملف النسخة الاحتياطية غير صالح. لم يتم تغيير أي بيانات.');}};reader.readAsText(f);e.target.value='';
+  });
+  let pendingReminderTimer=null;
+  function applyReminderSchedule(){if(pendingReminderTimer)clearInterval(pendingReminderTimer);const mins=Number(companySettings.reminderMinutes||0);if(!mins)return;if(!sessionStorage.getItem('fp_last_pending_reminder'))sessionStorage.setItem('fp_last_pending_reminder',String(Date.now()));pendingReminderTimer=setInterval(()=>{const pending=state.held.filter(o=>(o.status||'pending')!=='delivered');if(!pending.length)return;const now=Date.now();const last=Number(sessionStorage.getItem('fp_last_pending_reminder')||now);if(now-last<mins*60000)return;sessionStorage.setItem('fp_last_pending_reminder',String(now));playAlertSound();const msg=`تذكير: لديك ${pending.length} أوردرات لم يتم تسليمها بعد`;const t=document.getElementById('toastText');t.textContent=msg;const banner=document.getElementById('toastBanner');banner.classList.add('show');setTimeout(()=>banner.classList.remove('show'),7000);},30000);}
+  applyCompanySettings();applyReminderSchedule();
 
   const savedReportMode = localStorage.getItem('fp_report_currency_mode') || 'convert';
   const savedExchangeRate = localStorage.getItem('fp_report_eur_rate');
@@ -2899,47 +1250,24 @@ document.addEventListener('DOMContentLoaded', () => {
     alert('تم تسجيل المصروف بنجاح 💸');
   });
 
-  let currentReceiptSale = null;
   function showReceiptModal(sale) {
-    currentReceiptSale = sale;
     const modal = document.getElementById('receiptModal');
     const area = document.getElementById('receiptPrintArea');
-    const rows = (sale.cart || []).map(c => `<div style="display:flex;justify-content:space-between;gap:8px;"><span>${c.name || c.itemName || 'صنف'} × ${Number(c.qty || 1)}</span><b>${formatMoney(Number(c.price || 0) * Number(c.qty || 1), sale.currency)}</b></div>`).join('');
     area.innerHTML = `
-      <div class="receipt-center"><b>${state.companyName || 'FRESHLY & PREMIER'}</b><br>${state.companySubtitle || ''}<br>رقم الفاتورة: ${sale.id}</div>
+      <div class="receipt-center"><b>${escapeHtml(companySettings.name||'FRESHLY & PREMIER')}</b><br>${escapeHtml(companySettings.subtitle||'PREMIER BEVERIDGE CO')}<br>${escapeHtml(companySettings.address||'')}<br>${escapeHtml(companySettings.phone||'')}<br>رقم: ${sale.id}</div>
       <div class="receipt-line"></div>
-      <div>العميل: ${sale.customer || ''}<br>التاريخ: ${sale.date || ''}<br>الكاشير: ${sale.cashier || ''}<br>الدفع: ${sale.paymentMethod || ''}</div>
+      <div>العميل: ${sale.customer}<br>التاريخ: ${sale.date}</div>
       <div class="receipt-line"></div>
-      ${rows}
-      <div class="receipt-line"></div>
-      <div>المجموع: <b>${formatMoney(sale.subtotal ?? sale.total, sale.currency)}</b></div>
-      <div>الخصم (${Number(sale.discountRate || 0)}%): <b>${formatMoney(sale.discountAmount || 0, sale.currency)}</b></div>
-      <div>الضريبة (${Number(sale.taxRate || 0)}%): <b>${formatMoney(sale.taxAmount || 0, sale.currency)}</b></div>
-      <div style="font-size:1rem;margin-top:5px;">الإجمالي النهائي: <b>${formatMoney(sale.netTotal ?? sale.total, sale.currency)}</b></div>
-      <div class="receipt-line"></div><div class="receipt-center">شكراً لزيارتكم ❤️</div>
+      الإجمالي: <b>${formatMoney(sale.total)}</b>
     `;
-    const qr = document.getElementById('qrcodeContainer'); qr.innerHTML = '';
-    if (window.QRCode) new QRCode(qr, { text: `Invoice: ${sale.id}`, width: 90, height: 90 });
+    document.getElementById('qrcodeContainer').innerHTML = "";
+    new QRCode(document.getElementById("qrcodeContainer"), { text: `Invoice: ${sale.id}`, width: 90, height: 90 });
     modal.style.display = 'flex';
   }
 
   window.closeReceiptModal = () => document.getElementById('receiptModal').style.display = 'none';
-  window.printDirectReceipt = () => {
-    if (!currentReceiptSale) return;
-    const area = document.getElementById('receiptPrintArea').innerHTML;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) { alert('اسمح بفتح نافذة الطباعة من إعدادات المتصفح ثم حاول مرة أخرى.'); return; }
-    printWindow.document.open();
-    printWindow.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>إيصال ${currentReceiptSale.id}</title><style>body{font-family:Arial,Tahoma,sans-serif;color:#111;width:76mm;margin:0 auto;padding:8px;font-size:12px} .receipt-line{border-bottom:1px dashed #555;margin:8px 0}.receipt-center{text-align:center}b{font-weight:800}@media print{@page{margin:4mm;size:80mm auto}}</style></head><body>${area}</body></html>`);
-    printWindow.document.close(); printWindow.focus(); setTimeout(() => { printWindow.print(); printWindow.close(); }, 350);
-  };
-  window.sendWhatsAppReceipt = () => {
-    if (!currentReceiptSale) return;
-    const sale = currentReceiptSale;
-    const lines = (sale.cart || []).map(c => `${c.name || 'صنف'} × ${c.qty || 1}: ${formatMoney(Number(c.price || 0) * Number(c.qty || 1), sale.currency)}`).join('\n');
-    const message = `${state.companyName || 'FRESHLY & PREMIER'}\nفاتورة: ${sale.id}\nالعميل: ${sale.customer || ''}\n${lines}\nالإجمالي: ${formatMoney(sale.netTotal ?? sale.total, sale.currency)}\nشكراً لطلبكم`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-  };
+  window.printDirectReceipt = () => window.print();
+  window.sendWhatsAppReceipt = () => window.open(`https://wa.me/201119843222?text=${encodeURIComponent('شكراً لطلبك من FRESHLY!')}`, '_blank');
 
   function switchTab(name) {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === name));
@@ -2953,68 +1281,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tab && tab !== 'menu') btn.addEventListener('click', () => switchTab(tab));
   });
 
-  // إعدادات الهوية واللغة والعملة
-  const langSelect = document.getElementById('langSelect');
-  const currencySelect = document.getElementById('currencySelect');
-  langSelect.value = state.lang;
-  currencySelect.value = state.currency;
-  langSelect.addEventListener('change', () => { state.lang = langSelect.value; persistState(); renderCartFull(); renderItemPicker(); renderItemsManagement(); });
-  currencySelect.addEventListener('change', () => { state.currency = currencySelect.value; persistState(); renderCartFull(); renderHeldOrders(); renderItemsManagement(); });
-
-  document.getElementById('settingCompanyName').value = state.companyName;
-  document.getElementById('settingSubtitle').value = state.companySubtitle;
-  function applyBranding() {
-    document.getElementById('brandTitle').textContent = state.companyName || 'FRESHLY & PREMIER';
-    document.getElementById('brandSubtitle').textContent = state.companySubtitle || 'PREMIER BEVERIDGE CO';
-  }
-  applyBranding();
-  document.getElementById('syncMenuCatalogBtn').addEventListener('click', window.syncCatalogFromMenu);
-  document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-    state.companyName = document.getElementById('settingCompanyName').value.trim() || 'FRESHLY & PREMIER';
-    state.companySubtitle = document.getElementById('settingSubtitle').value.trim();
-    persistState(); applyBranding(); alert('تم حفظ إعدادات الشركة بنجاح.');
-  });
-
-  // نسخ احتياطي قابل للنقل بين الأجهزة
-  document.getElementById('exportBackupBtn').addEventListener('click', () => {
-    const backup = { app: 'FRESHLY_POS', version: 1, exportedAt: new Date().toISOString(), data: {
-      lang: state.lang, currency: state.currency, items: state.items, sales: state.sales, held: state.held,
-      custodyByDate: state.custodyByDate, expensesByDate: state.expensesByDate,
-      companyName: state.companyName, companySubtitle: state.companySubtitle, customAlertSound: state.customAlertSound
-    }};
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a');
-    a.href = url; a.download = `FRESHLY_POS_BACKUP_${todayStr}.json`; a.click(); URL.revokeObjectURL(url);
-  });
-  document.getElementById('restoreBackupBtn').addEventListener('click', () => document.getElementById('restoreBackupInput').click());
-  document.getElementById('restoreBackupInput').addEventListener('change', event => {
-    const file = event.target.files && event.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const backup = JSON.parse(reader.result); const data = backup && backup.data;
-        if (!data || !Array.isArray(data.items) || !Array.isArray(data.sales) || !Array.isArray(data.held)) throw new Error('Invalid backup format');
-        if (!confirm('استعادة النسخة ستستبدل بيانات هذا الجهاز بالبيانات الموجودة في الملف. هل أنشأت نسخة احتياطية من البيانات الحالية وتريد المتابعة؟')) return;
-        state.lang = data.lang || 'ar'; state.currency = data.currency || 'EGP'; state.items = data.items;
-        state.sales = data.sales; state.held = data.held; state.custodyByDate = data.custodyByDate || {};
-        state.expensesByDate = data.expensesByDate || {}; state.companyName = data.companyName || 'FRESHLY & PREMIER';
-        state.companySubtitle = data.companySubtitle || 'PREMIER BEVERIDGE CO'; state.customAlertSound = data.customAlertSound || state.customAlertSound;
-        persistState(); location.reload();
-      } catch (error) { alert('تعذر استعادة النسخة: الملف غير صالح أو تالف.'); }
-    };
-    reader.readAsText(file); event.target.value = '';
-  });
-
   document.getElementById('saleDateInput').value = todayStr;
   document.getElementById('custodyDateInput').value = todayStr;
   document.getElementById('expenseDateInput').value = todayStr;
   document.getElementById('customStartDate').value = todayStr;
   document.getElementById('customEndDate').value = todayStr;
 
-  persistState();
   renderCartFull();
   renderHeldOrders();
-  renderItemsManagement();
+  renderHomeOrderStatus();
 });
 </script>
 </body>
