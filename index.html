@@ -1,971 +1,1165 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FRESHLY & PREMIER — نظام الكاشير والمبيعات</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest.json">
+<title>FRESHLY & PREMIER - POS Cashier</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Firebase App & Database SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <style>
   :root {
-    --bg: #070b14;
-    --bg-2: #0d1526;
-    --card: #121c33;
-    --card-2: #172340;
-    --text: #f8fafc;
-    --muted: #94a3b8;
-    --gold: #f59e0b;
-    --gold-2: #fbbf24;
-    --gold-soft: rgba(245, 158, 11, 0.14);
-    --green: #10b981;
-    --green-soft: rgba(16, 185, 129, 0.15);
-    --blue: #38bdf8;
-    --red: #ef4444;
-    --border: rgba(255, 255, 255, 0.08);
-    --border-gold: rgba(245, 158, 11, 0.34);
+    --bg-dark: #0c0e13;
+    --bg-panel: #151922;
+    --bg-card: #1c212d;
+    --bg-input: #10131a;
+    --gold-light: #fcf6ba;
+    --gold-main: #d4af37;
+    --gold-dark: #aa771c;
+    --gold-gradient: linear-gradient(135deg, #bf953f 0%, #fcf6ba 30%, #d4af37 55%, #fbf5b7 80%, #aa771c 100%);
+    --border-gold: rgba(212, 175, 55, 0.35);
+    --border-subtle: #2a303f;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --success: #10b981;
+    --danger: #ef4444;
+    --radius: 12px;
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
 
-  body {
-    margin: 0;
-    background: radial-gradient(circle at top, #13213e 0%, var(--bg) 55%);
-    color: var(--text);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Cairo", "Tajawal", sans-serif;
-    min-height: 100vh;
+  body { background-color: #07080b; color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+
+  .phone-frame {
+    width: 100%; max-width: 430px; height: 94vh; max-height: 870px;
+    background: var(--bg-dark); display: flex; flex-direction: column; position: relative;
+    overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.9); border: 1px solid var(--border-gold); border-radius: 24px;
   }
 
-  .pos-shell {
-    max-width: 1260px;
-    margin: 0 auto;
-    padding: 14px;
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg-dark); }
+  ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+
+  .app-header { background: var(--bg-panel); border-bottom: 1px solid var(--border-gold); padding: 8px 12px; flex-shrink: 0; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .brand-box { display: flex; align-items: center; gap: 8px; }
+  .brand-title { font-size: 0.95rem; font-weight: 900; background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 0.5px; }
+  .brand-sub { font-size: 0.58rem; color: var(--text-muted); letter-spacing: 1px; }
+
+  .header-controls { display: flex; align-items: center; gap: 5px; }
+  .selector-pill { display: flex; align-items: center; gap: 3px; background: var(--bg-card); border: 1px solid var(--border-gold); padding: 4px 6px; border-radius: 8px; font-size: 0.72rem; }
+  .selector-pill select { background: transparent; color: var(--gold-light); border: none; font-weight: 700; font-size: 0.72rem; outline: none; cursor: pointer; }
+  .selector-pill select option { background: var(--bg-panel); color: var(--text-main); }
+
+  .main-content { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; position: relative; }
+  .view-section { display: none; flex-direction: column; gap: 8px; height: 100%; flex: 1; }
+  .view-section.active { display: flex; }
+
+  .pos-container { display: flex; flex-direction: column; gap: 8px; height: 100%; flex: 1; overflow: hidden; }
+  .input-field { width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 7px 10px; border-radius: 9px; font-size: 0.82rem; outline: none; }
+  .input-field:focus { border-color: var(--gold-main); }
+
+  .cart-panel-full { background: var(--bg-panel); border: 1px solid var(--border-gold); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+  .cart-list-full { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .cart-empty { text-align: center; color: var(--text-muted); padding: 15px; font-size: 0.8rem; }
+  
+  .cart-row-detailed { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; }
+  .cart-row-top { display: flex; justify-content: space-between; align-items: center; }
+  .cart-item-name { font-weight: 800; color: var(--text-main); font-size: 0.82rem; }
+  
+  .item-options-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--bg-input); padding: 6px; border-radius: 8px; border: 1px solid var(--border-subtle); }
+  .item-options-grid select, .item-options-grid input { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle); padding: 3px 5px; font-size: 0.68rem; border-radius: 6px; outline: none; }
+
+  .cart-row-bottom { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-subtle); padding-top: 4px; }
+  .qty-btn { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main); font-weight: 900; cursor: pointer; }
+
+  .invoice-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; flex-shrink: 0; }
+  .invoice-meta-grid label { display: block; font-size: 0.62rem; color: var(--text-muted); margin-bottom: 2px; }
+
+  .cart-extras { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; flex-shrink: 0; }
+  .cart-extras label { display: block; font-size: 0.62rem; color: var(--text-muted); margin-bottom: 2px; }
+  .cart-extras input { padding: 6px; font-size: 0.75rem; }
+
+  .totals-row { display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 0.98rem; color: var(--gold-main); margin-bottom: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); flex-shrink: 0; }
+
+  .btn { padding: 9px 10px; border-radius: 10px; font-weight: 800; font-size: 0.8rem; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .btn-gold { background: var(--gold-gradient); color: #0b0d12; width: 100%; }
+  .btn-dark { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle); }
+  .btn-danger { background: rgba(239, 68, 68, 0.18); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.4); }
+
+  .nav-bar { background: var(--bg-panel); border-top: 1px solid var(--border-gold); display: flex; justify-content: space-around; align-items: center; padding: 8px 4px 12px 4px; flex-shrink: 0; z-index: 100; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); }
+  .nav-btn { background: transparent; color: var(--text-muted); border: none; padding: 4px 6px; border-radius: 8px; font-size: 0.65rem; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
+  .nav-btn.active { color: var(--gold-main); }
+  .nav-btn .icon { font-size: 1.05rem; }
+  .badge-count { position: absolute; top: 0; right: 5px; background: var(--danger); color: white; font-size: 0.6rem; padding: 1px 4px; border-radius: 10px; font-weight: 900; display: none; }
+
+  .panel-box { background: var(--bg-panel); border: 1px solid var(--border-gold); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; text-align: right; }
+  .data-table th, .data-table td { padding: 6px; border-bottom: 1px solid var(--border-subtle); }
+  .data-table th { color: var(--gold-light); font-weight: 800; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; padding: 15px; }
+  .modal-content { background: var(--bg-panel); border: 1px solid var(--border-gold); border-radius: 16px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+  
+  .receipt-preview { background: #fff; color: #111; padding: 15px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 0.75rem; text-align: right; }
+  .receipt-center { text-align: center; }
+  .receipt-line { border-bottom: 1px dashed #444; margin: 6px 0; }
+  
+  .toast-banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: var(--gold-gradient); color: #0b0d12; padding: 8px 16px; border-radius: 10px; font-weight: 900; font-size: 0.8rem; z-index: 999; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.7); white-space: nowrap; }
+  .toast-banner.show { display: flex; }
+
+  body.printing-report-only #view-reports { display:flex !important; }
+  body.printing-report-only .view-section:not(#view-reports) { display:none !important; }
+
+  @media print {
+    @page { size: auto; margin: 12mm; }
+    html, body {
+      display: block !important; width: 100% !important; min-height: 0 !important;
+      height: auto !important; overflow: visible !important; background: #fff !important;
+      color: #111 !important;
+    }
+    body { justify-content: flex-start !important; align-items: flex-start !important; }
+    .phone-frame {
+      display: block !important; width: 100% !important; max-width: none !important;
+      height: auto !important; max-height: none !important; overflow: visible !important;
+      border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+      background: #fff !important;
+    }
+    .app-header, .nav-bar, .toast-banner, #receiptModal, .no-print { display: none !important; }
+    .main-content { display: block !important; overflow: visible !important; padding: 0 !important; }
+    .view-section { display: none !important; height: auto !important; overflow: visible !important; }
+    #view-reports {
+      display: flex !important; height: auto !important; overflow: visible !important;
+      color: #111 !important; background: #fff !important;
+    }
+    #view-reports .panel-box {
+      background: #fff !important; color: #111 !important;
+      border: 1px solid #bbb !important; box-shadow: none !important;
+      break-inside: avoid; overflow: visible !important;
+    }
+    #view-reports h3, #view-reports h4, #view-reports label,
+    #view-reports span, #view-reports td, #view-reports th,
+    #view-reports div { color: #111 !important; }
+    #view-reports table { width: 100% !important; border-collapse: collapse !important; }
+    #view-reports th, #view-reports td { border: 1px solid #bbb !important; padding: 7px !important; }
+    #view-reports tfoot { font-weight: 800 !important; }
   }
 
-  .pos-header {
-    background: var(--card);
-    border: 1px solid var(--border-gold);
-    border-radius: 18px;
-    padding: 14px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .pos-brand h1 {
-    margin: 0;
-    font-size: 19px;
-    font-weight: 900;
-  }
-
-  .pos-brand p {
-    margin: 2px 0 0;
-    font-size: 12px;
-    color: var(--gold-2);
-  }
-
-  .pos-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .btn {
-    border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text);
-    border-radius: 11px;
-    padding: 8px 12px;
-    font-family: inherit;
-    font-size: 12.5px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .btn:hover { border-color: var(--border-gold); color: var(--gold-2); }
-  .btn-gold { background: linear-gradient(135deg, var(--gold-2), #d97706); color: #09101d; border: none; font-weight: 900; }
-  .btn-green { background: #10b981; color: #04130c; border: none; font-weight: 900; }
-  .btn-wa { background: #16a34a; color: #fff; border: none; font-weight: 800; }
-  .btn-red { background: rgba(239, 68, 68, 0.16); color: #fca5a5; border-color: rgba(239, 68, 68, 0.35); }
-
-  .pos-grid {
-    margin-top: 14px;
-    display: grid;
-    grid-template-columns: 1.45fr 1fr;
-    gap: 14px;
-    align-items: start;
-  }
-
-  @media (max-width: 960px) {
-    .pos-grid { grid-template-columns: 1fr; }
-  }
-
-  .panel {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 14px;
-  }
-
-  .panel-title {
-    margin: 0 0 12px;
-    font-size: 15.5px;
-    font-weight: 900;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-    gap: 10px;
-  }
-
-  .prod-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 13px;
-    padding: 11px;
-    cursor: pointer;
-    transition: 0.16s;
-  }
-
-  .prod-card:hover { border-color: var(--gold); transform: translateY(-1px); }
-  .prod-name { font-weight: 800; font-size: 13.5px; }
-  .prod-price { color: var(--gold-2); font-weight: 900; font-size: 13px; margin-top: 4px; }
-
-  .cart-table {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .cart-line {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 11px;
-    padding: 8px 10px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 12.5px;
-  }
-
-  .mini-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-
-  .inp, .sel {
-    width: 100%;
-    background: var(--card);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 10px;
-    padding: 8px 10px;
-    font-family: inherit;
-    font-size: 12.5px;
-  }
-
-  .totals-box {
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid var(--border-gold);
-    border-radius: 13px;
-    padding: 10px 12px;
-    margin-bottom: 10px;
-    font-size: 13px;
-  }
-
-  .totals-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-  }
-
-  .totals-final {
-    display: flex;
-    justify-content: space-between;
-    font-size: 16px;
-    font-weight: 900;
-    color: var(--gold-2);
-    border-top: 1px dashed rgba(255, 255, 255, 0.12);
-    padding-top: 6px;
-    margin-top: 4px;
-  }
-
-  .pending-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .pending-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 12px;
-  }
-
-  .pending-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    font-weight: 800;
-    font-size: 13px;
-  }
-
-  .badge {
-    font-size: 11px;
-    padding: 3px 9px;
-    border-radius: 999px;
-    font-weight: 800;
-  }
-
-  .b-pending { background: rgba(245, 158, 11, 0.16); color: #fbbf24; }
-  .b-preparing { background: rgba(56, 189, 248, 0.16); color: #38bdf8; }
-  .b-ready { background: rgba(16, 185, 129, 0.16); color: #34d399; }
-  .b-delivered { background: rgba(148, 163, 184, 0.16); color: #e2e8f0; }
-
-  .toast {
-    position: fixed;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-20px);
-    background: #111c33;
-    color: #fff;
-    border: 1px solid var(--border-gold);
-    border-radius: 999px;
-    padding: 9px 18px;
-    font-size: 13px;
-    font-weight: 700;
-    opacity: 0;
-    pointer-events: none;
-    transition: 0.25s;
-    z-index: 200;
-  }
-
-  .toast.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
 </style>
 </head>
 <body>
-<div class="toast" id="toast"></div>
 
-<div class="pos-shell">
-  <header class="pos-header">
-    <div class="pos-brand">
-      <h1 id="posTitle">FRESHLY & PREMIER — POS</h1>
-      <p id="posSub">إدارة الكاشير • طلبات المنيو المباشرة • التقارير اليومية</p>
-    </div>
+  <!-- عنصر الصوت للتنبيه -->
+  <audio id="orderAlertSound" preload="auto"></audio>
 
-    <div class="pos-controls">
-      <span class="badge b-ready" id="connBadge">🔵 شبكة داخلية / محلي</span>
-      <select class="sel" id="currencySelect" style="width:auto;">
-        <option value="EGP">EGP</option>
-        <option value="EUR">EUR (€)</option>
-      </select>
-      <button class="btn" id="langToggleBtn" type="button">🌐 EN</button>
-      <button class="btn" id="syncNowBtn" type="button">🔄 مزامنة</button>
-      <button class="btn btn-wa" id="waReportBtn" type="button">💬 تقرير واتساب</button>
-    </div>
-  </header>
+  <div class="phone-frame">
+    <div id="toastBanner" class="toast-banner"><span id="toastText">تم التنفيذ بنجاح!</span></div>
 
-  <div class="pos-grid">
-    <div>
-      <div class="panel">
-        <h2 class="panel-title">
-          <span id="menuSecTitle">🍹 أصناف البار</span>
-          <span style="font-size:12px; color:var(--muted);" id="salesSummaryText">مبيعات اليوم: 0 EGP (0)</span>
-        </h2>
-        <div class="products-grid" id="productsGrid"></div>
-      </div>
-
-      <div class="panel" style="margin-top:14px;">
-        <h2 class="panel-title">
-          <span id="pendingSecTitle">📥 طلبات المنيو الواردة</span>
-          <span style="font-size:12px; color:var(--gold-2);" id="pendingCountText">0</span>
-        </h2>
-        <div class="pending-list" id="pendingOrdersList"></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2 class="panel-title">
-        <span id="posCartTitle">🧾 فاتورة الكاشير الحالية</span>
-      </h2>
-
-      <div class="cart-table" id="posCartList"></div>
-
-      <div class="mini-grid">
-        <input class="inp" id="cashierNameInput" type="text" placeholder="اسم الكاشير" value="أسامة أشرف" />
-        <select class="sel" id="paymentMethodSelect">
-          <option value="cash">كاش / Cash</option>
-          <option value="card">فيزا / Card</option>
-        </select>
-        <input class="inp" id="discountInput" type="number" min="0" step="0.5" placeholder="خصم %" value="0" />
-        <input class="inp" id="taxInput" type="number" min="0" step="0.5" placeholder="ضريبة %" value="0" />
-        <input class="inp" id="eurRateInput" type="number" min="1" step="0.5" placeholder="سعر اليورو EGP" value="55" />
-        <input class="inp" id="tableOrRoomInput" type="text" placeholder="غرفة / طاولة / ملاحظة" />
-      </div>
-
-      <div class="totals-box">
-        <div class="totals-row">
-          <span>المجموع الفرعي:</span>
-          <strong id="posSubtotalText">0 EGP</strong>
+    <!-- نافذة المعاينة والطباعة -->
+    <div id="receiptModal" class="modal-overlay">
+      <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-weight:900; color:var(--gold-main); font-size:0.9rem;">🧾 معاينة الفاتورة الرسمية</span>
+          <button class="btn btn-danger" style="padding:4px 8px; font-size:0.7rem;" onclick="closeReceiptModal()">✕ إغلاق</button>
         </div>
-        <div class="totals-row">
-          <span>الخصم / الضريبة:</span>
-          <strong id="posAdjText">0 EGP</strong>
-        </div>
-        <div class="totals-final">
-          <span>الإجمالي النهائي:</span>
-          <span id="posGrandTotalText">0 EGP</span>
+        <div id="receiptPrintArea" class="receipt-preview"></div>
+        <div id="qrcodeContainer" style="display:flex; justify-content:center; background:#fff; padding:6px; border-radius:6px;"></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <button class="btn btn-dark" onclick="printDirectReceipt()">🖨️ طباعة الإيصال</button>
+          <button class="btn btn-gold" onclick="sendWhatsAppReceipt()">💬 إرسال للواتساب</button>
         </div>
       </div>
-
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn btn-green" id="checkoutBtn" type="button" style="flex:1;">✅ إتمام الدفع</button>
-        <button class="btn btn-red" id="clearPosCartBtn" type="button">تفريغ</button>
-      </div>
     </div>
-  </div>
-</div>
 
-<!-- Firebase SDK (Compat) + LAN / Offline Shared Bus -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-top">
+        <div class="brand-box">
+          <div>
+            <div class="brand-title">FRESHLY &amp; PREMIER</div>
+            <div class="brand-sub">PREMIER BEVERIDGE CO</div>
+          </div>
+        </div>
 
-<script>
-(() => {
-  const firebaseConfig = {
-    apiKey: "AIzaSyBMH6XnDvVzd_bRYdjq3AKWMq0IqP7F8WU",
-    authDomain: "freshly-pos.firebaseapp.com",
-    databaseURL: "https://freshly-pos-default-rtdb.firebaseio.com",
-    projectId: "freshly-pos",
-    storageBucket: "freshly-pos.firebasestorage.app",
-    messagingSenderId: "92150322225",
-    appId: "1:92150322225:web:ced60779ef510197863110",
-    measurementId: "G-E4CRKEHSXF"
-  };
-
-  /* Surgical LAN / Offline Bridge (keeps existing UI, styles, categories, products & Firebase intact) */
-  const LAN_BRIDGE_KEY = "freshly_premier_lan_bridge_v1";
-  const lanBc = ("BroadcastChannel" in window) ? new BroadcastChannel("freshly_premier_lan_bridge") : null;
-  const lanSubs = {};
-
-  function readLanBridge() {
-    try {
-      return JSON.parse(localStorage.getItem(LAN_BRIDGE_KEY) || '{"pendingOrders":{},"orderTracking":{},"orderRatings":{}}');
-    } catch (_) {
-      return { pendingOrders: {}, orderTracking: {}, orderRatings: {} };
-    }
-  }
-
-  function writeLanBridge(obj) {
-    try {
-      localStorage.setItem(LAN_BRIDGE_KEY, JSON.stringify(obj));
-    } catch (_) {}
-  }
-
-  function getLanVal(path) {
-    const store = readLanBridge();
-    if (!path) return store;
-    const parts = path.split("/").filter(Boolean);
-    let cur = store;
-    for (const p of parts) {
-      if (!cur || typeof cur !== "object" || !(p in cur)) return null;
-      cur = cur[p];
-    }
-    return cur;
-  }
-
-  function notifyLanPath(path) {
-    const val = getLanVal(path);
-    (lanSubs[path] || []).forEach(fn => {
-      try { fn({ val: () => val, exists: () => val !== null && val !== undefined }); } catch (_) {}
-    });
-  }
-
-  function setLanVal(path, value) {
-    const store = readLanBridge();
-    const parts = path.split("/").filter(Boolean);
-    if (!parts.length) return;
-    let cur = store;
-    for (let i = 0; i < parts.length - 1; i++) {
-      const p = parts[i];
-      if (!cur[p] || typeof cur[p] !== "object") cur[p] = {};
-      cur = cur[p];
-    }
-    const last = parts[parts.length - 1];
-    if (value === null || value === undefined) delete cur[last];
-    else cur[last] = value;
-    writeLanBridge(store);
-    if (lanBc) lanBc.postMessage({ type: "sync", path });
-    notifyLanPath(path);
-    if (parts.length > 1) {
-      const parent = parts.slice(0, -1).join("/");
-      notifyLanPath(parent);
-    }
-  }
-
-  if (lanBc) {
-    lanBc.onmessage = ev => {
-      if (ev.data && ev.data.type === "sync" && ev.data.path) {
-        notifyLanPath(ev.data.path);
-      }
-    };
-  }
-
-  window.addEventListener("storage", ev => {
-    if (ev.key === LAN_BRIDGE_KEY) {
-      Object.keys(lanSubs).forEach(notifyLanPath);
-    }
-  });
-
-  const offlineLanDb = {
-    ref(path = "") {
-      return {
-        once: async () => {
-          const v = getLanVal(path);
-          return { val: () => v, exists: () => v !== null && v !== undefined };
-        },
-        on: (_evt, cb) => {
-          if (!lanSubs[path]) lanSubs[path] = [];
-          lanSubs[path].push(cb);
-          const v = getLanVal(path);
-          cb({ val: () => v, exists: () => v !== null && v !== undefined });
-        },
-        off: (_evt, cb) => {
-          if (!lanSubs[path]) return;
-          lanSubs[path] = cb ? lanSubs[path].filter(f => f !== cb) : [];
-        },
-        update: async obj => {
-          Object.entries(obj || {}).forEach(([k, v]) => setLanVal(k, v));
-        },
-        set: async v => {
-          setLanVal(path, v);
-        }
-      };
-    }
-  };
-
-
-  /* LAN / Offline Shared Store */
-  const LAN_SHARED_KEY = "freshly_premier_lan_rtdb_v1";
-  const lanChannel = ("BroadcastChannel" in window) ? new BroadcastChannel("freshly_premier_lan_channel") : null;
-  const lanListeners = {};
-
-  function readLanStore() {
-    try {
-      return JSON.parse(localStorage.getItem(LAN_SHARED_KEY) || '{"pendingOrders":{},"orderTracking":{},"orderRatings":{}}');
-    } catch (_) {
-      return { pendingOrders: {}, orderTracking: {}, orderRatings: {} };
-    }
-  }
-
-  function writeLanStore(store) {
-    try {
-      localStorage.setItem(LAN_SHARED_KEY, JSON.stringify(store));
-    } catch (_) {}
-  }
-
-  function notifyLanListeners(path, val) {
-    (lanListeners[path] || []).forEach(fn => {
-      try { fn({ val: () => val, exists: () => val !== undefined && val !== null }); } catch (_) {}
-    });
-  }
-
-  function getLanPathValue(path) {
-    const store = readLanStore();
-    if (!path) return store;
-    const parts = path.split("/").filter(Boolean);
-    let cur = store;
-    for (const p of parts) {
-      if (!cur || typeof cur !== "object" || !(p in cur)) return null;
-      cur = cur[p];
-    }
-    return cur;
-  }
-
-  function setLanPathValue(path, value) {
-    const store = readLanStore();
-    const parts = path.split("/").filter(Boolean);
-    if (!parts.length) return;
-    let cur = store;
-    for (let i = 0; i < parts.length - 1; i++) {
-      const p = parts[i];
-      if (!cur[p] || typeof cur[p] !== "object") cur[p] = {};
-      cur = cur[p];
-    }
-    const last = parts[parts.length - 1];
-    if (value === null || value === undefined) {
-      delete cur[last];
-    } else {
-      cur[last] = value;
-    }
-    writeLanStore(store);
-    if (lanChannel) {
-      lanChannel.postMessage({ type: "update", path, value });
-    }
-    notifyLanListeners(path, value);
-    if (parts.length > 1) {
-      const parentPath = parts.slice(0, -1).join("/");
-      notifyLanListeners(parentPath, getLanPathValue(parentPath));
-    }
-  }
-
-  if (lanChannel) {
-    lanChannel.onmessage = ev => {
-      const d = ev.data || {};
-      if (d.type === "update" && d.path) {
-        notifyLanListeners(d.path, d.value !== undefined ? d.value : getLanPathValue(d.path));
-      }
-    };
-  }
-
-  window.addEventListener("storage", ev => {
-    if (ev.key === LAN_SHARED_KEY) {
-      Object.keys(lanListeners).forEach(p => {
-        notifyLanListeners(p, getLanPathValue(p));
-      });
-    }
-  });
-
-  const lanDb = {
-    ref(path = "") {
-      return {
-        once: async () => {
-          const val = getLanPathValue(path);
-          return { val: () => val, exists: () => val !== null && val !== undefined };
-        },
-        on: (_event, cb) => {
-          if (!lanListeners[path]) lanListeners[path] = [];
-          lanListeners[path].push(cb);
-          const cur = getLanPathValue(path);
-          cb({ val: () => cur, exists: () => cur !== null && cur !== undefined });
-        },
-        off: (_event, cb) => {
-          if (!lanListeners[path]) return;
-          lanListeners[path] = cb ? lanListeners[path].filter(f => f !== cb) : [];
-        },
-        update: async obj => {
-          Object.entries(obj || {}).forEach(([k, v]) => setLanPathValue(k, v));
-        },
-        set: async val => {
-          setLanPathValue(path, val);
-        }
-      };
-    }
-  };
-
-  let db = lanDb;
-  let dbConnected = false;
-  let networkOnline = navigator.onLine;
-
-  const WHATSAPP_REPORT_TARGET = "00201119843222";
-
-  const PRODUCTS = [
-    { id: "juice-mango", nameAr: "عصير مانجو فريش", nameEn: "Fresh Mango Juice", priceEgp: 65, priceEur: 2 },
-    { id: "juice-guava", nameAr: "جوافة بالنعناع", nameEn: "Guava with Mint", priceEgp: 60, priceEur: 2 },
-    { id: "juice-orange", nameAr: "برتقال فريش", nameEn: "Fresh Orange Juice", priceEgp: 55, priceEur: 1.5 },
-    { id: "juice-lemon-mint", nameAr: "ليمون بالنعناع", nameEn: "Lemon Mint", priceEgp: 50, priceEur: 1.5 },
-    { id: "cock-freshly-special", nameAr: "كوكتيل فريشلي الخاص", nameEn: "Freshly Special Cocktail", priceEgp: 95, priceEur: 3 },
-    { id: "cock-blue-lagoon", nameAr: "بلو لاجون موكتيل", nameEn: "Blue Lagoon Mocktail", priceEgp: 85, priceEur: 2.5 },
-    { id: "ice-latte", nameAr: "آيس لاتيه", nameEn: "Iced Latte", priceEgp: 75, priceEur: 2.5 },
-    { id: "hot-turkish", nameAr: "قهوة تركي", nameEn: "Turkish Coffee", priceEgp: 45, priceEur: 1.5 },
-    { id: "fruit-platter-mix", nameAr: "صحن فواكه مشكلة", nameEn: "Mixed Fruit Platter", priceEgp: 130, priceEur: 4 }
-  ];
-
-  const state = {
-    lang: localStorage.getItem("freshly_pos_lang") || "ar",
-    currency: localStorage.getItem("freshly_pos_currency") || "EGP",
-    cart: {},
-    sales: JSON.parse(localStorage.getItem("freshly_pos_sales") || "[]"),
-    pendingOrders: {}
-  };
-
-  const els = {
-    connBadge: document.getElementById("connBadge"),
-    currencySelect: document.getElementById("currencySelect"),
-    langToggleBtn: document.getElementById("langToggleBtn"),
-    syncNowBtn: document.getElementById("syncNowBtn"),
-    waReportBtn: document.getElementById("waReportBtn"),
-    productsGrid: document.getElementById("productsGrid"),
-    salesSummaryText: document.getElementById("salesSummaryText"),
-    pendingOrdersList: document.getElementById("pendingOrdersList"),
-    pendingCountText: document.getElementById("pendingCountText"),
-    posCartList: document.getElementById("posCartList"),
-    cashierNameInput: document.getElementById("cashierNameInput"),
-    paymentMethodSelect: document.getElementById("paymentMethodSelect"),
-    discountInput: document.getElementById("discountInput"),
-    taxInput: document.getElementById("taxInput"),
-    eurRateInput: document.getElementById("eurRateInput"),
-    tableOrRoomInput: document.getElementById("tableOrRoomInput"),
-    posSubtotalText: document.getElementById("posSubtotalText"),
-    posAdjText: document.getElementById("posAdjText"),
-    posGrandTotalText: document.getElementById("posGrandTotalText"),
-    checkoutBtn: document.getElementById("checkoutBtn"),
-    clearPosCartBtn: document.getElementById("clearPosCartBtn"),
-    toast: document.getElementById("toast")
-  };
-
-  function showToast(msg) {
-    els.toast.textContent = msg;
-    els.toast.classList.add("show");
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => els.toast.classList.remove("show"), 2400);
-  }
-
-  function fmtMoney(amount, curr = state.currency) {
-    const n = Number(amount || 0);
-    const clean = Number.isInteger(n) ? n : n.toFixed(2);
-    return curr === "EUR" ? `€${clean}` : `${clean} EGP`;
-  }
-
-  function getProdPrice(p) {
-    return state.currency === "EUR" ? Number(p.priceEur || 0) : Number(p.priceEgp || 0);
-  }
-
-  function updateConnectionBadge() {
-    const isAr = state.lang === "ar";
-    if (dbConnected && networkOnline) {
-      els.connBadge.className = "badge b-ready";
-      els.connBadge.textContent = isAr ? "🟢 متصل بـ Firebase" : "🟢 Firebase Online";
-    } else {
-      els.connBadge.className = "badge b-preparing";
-      els.connBadge.textContent = isAr ? "🔵 شبكة داخلية / محلي" : "🔵 LAN / Offline Mode";
-    }
-  }
-
-  function initFirebaseAndLan() {
-    networkOnline = navigator.onLine;
-    try {
-      if (window.firebase && firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("...")) {
-        const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
-        const rtdb = firebase.database(app);
-        rtdb.ref(".info/connected").on("value", snap => {
-          const online = Boolean(snap.val()) && navigator.onLine;
-          dbConnected = online;
-          db = online ? rtdb : lanDb;
-          updateConnectionBadge();
-        });
-      }
-    } catch (err) {
-      console.warn("Firebase POS init:", err);
-      db = lanDb;
-      dbConnected = false;
-    }
-
-    const handlePendingSnap = snap => {
-      const val = snap.val() || {};
-      const lanVal = getLanPathValue("pendingOrders") || {};
-      state.pendingOrders = { ...lanVal, ...val };
-      renderPendingOrders();
-    };
-
-    lanDb.ref("pendingOrders").on("value", handlePendingSnap);
-    try {
-      if (window.firebase && firebase.apps.length) {
-        firebase.database().ref("pendingOrders").on("value", snap => {
-          const cloudVal = snap.val() || {};
-          Object.entries(cloudVal).forEach(([k, v]) => setLanPathValue(`pendingOrders/${k}`, v));
-          state.pendingOrders = { ...(getLanPathValue("pendingOrders") || {}), ...cloudVal };
-          renderPendingOrders();
-        });
-      }
-    } catch (_) {}
-
-    updateConnectionBadge();
-  }
-
-  function renderProducts() {
-    const isAr = state.lang === "ar";
-    els.productsGrid.innerHTML = PRODUCTS.map(p => `
-      <div class="prod-card" data-pid="${p.id}">
-        <div class="prod-name">${isAr ? p.nameAr : p.nameEn}</div>
-        <div class="prod-price">${fmtMoney(getProdPrice(p), state.currency)}</div>
+        <div class="header-controls">
+          <div class="selector-pill" title="Language">
+            <span>🌐</span>
+            <select id="langSelect">
+              <option value="ar">🇪🇬 AR</option>
+              <option value="en">🇬🇧 EN</option>
+            </select>
+          </div>
+          <div class="selector-pill" title="Currency">
+            <span>💱</span>
+            <select id="currencySelect">
+              <option value="EGP">🇪🇬 EGP</option>
+              <option value="EUR">🇪🇺 EUR</option>
+            </select>
+          </div>
+        </div>
       </div>
-    `).join("");
+    </header>
 
-    els.productsGrid.querySelectorAll(".prod-card").forEach(card => {
-      card.addEventListener("click", () => {
-        const pid = card.dataset.pid;
-        state.cart[pid] = (state.cart[pid] || 0) + 1;
-        renderPosCart();
-      });
-    });
-  }
+    <!-- Main Workspace -->
+    <main class="main-content">
 
-  function computeTotals() {
-    let subtotal = 0;
-    Object.entries(state.cart).forEach(([pid, qty]) => {
-      const prod = PRODUCTS.find(x => x.id === pid);
-      if (prod && qty > 0) {
-        subtotal += getProdPrice(prod) * qty;
-      }
-    });
-    const discPct = Math.max(0, Number(els.discountInput.value || 0));
-    const taxPct = Math.max(0, Number(els.taxInput.value || 0));
-    const discAmt = (subtotal * discPct) / 100;
-    const afterDisc = Math.max(0, subtotal - discAmt);
-    const taxAmt = (afterDisc * taxPct) / 100;
-    const grandTotal = Number((afterDisc + taxAmt).toFixed(2));
-    const adjNet = Number((taxAmt - discAmt).toFixed(2));
-    return { subtotal: Number(subtotal.toFixed(2)), discAmt, taxAmt, adjNet, grandTotal };
-  }
-
-  function renderPosCart() {
-    const isAr = state.lang === "ar";
-    const entries = Object.entries(state.cart).filter(([, q]) => q > 0);
-    if (!entries.length) {
-      els.posCartList.innerHTML = `<div style="color:var(--muted); font-size:12.5px; text-align:center; padding:14px;">${isAr ? "اختر أصنافاً لبدء الفاتورة" : "Select items to start an invoice"}</div>`;
-    } else {
-      els.posCartList.innerHTML = entries.map(([pid, qty]) => {
-        const prod = PRODUCTS.find(x => x.id === pid);
-        if (!prod) return "";
-        const line = getProdPrice(prod) * qty;
-        return `
-          <div class="cart-line">
-            <div>
-              <strong>${isAr ? prod.nameAr : prod.nameEn}</strong> × ${qty}
-              <div style="font-size:11px; color:var(--muted);">${fmtMoney(line)}</div>
+      <!-- 1. POS VIEW -->
+      <section id="view-pos" class="view-section active">
+        <div class="pos-container">
+          <div class="cart-panel-full">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:0.88rem; font-weight:900; color:var(--gold-main);">تفاصيل الفاتورة الشاملة</span>
+              <button class="btn btn-dark" style="padding:4px 8px; font-size:0.7rem;" onclick="addItemPrompt()">➕ إضافة صنف</button>
             </div>
-            <div style="display:flex; gap:5px;">
-              <button type="button" class="btn" data-c-dec="${pid}" style="padding:4px 8px;">−</button>
-              <button type="button" class="btn btn-gold" data-c-inc="${pid}" style="padding:4px 8px;">+</button>
+
+            <div class="invoice-meta-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:6px;">
+              <div>
+                <label>اسم العميل / الطاولة / الغرفة</label>
+                <input type="text" id="customerNameInput" class="input-field" placeholder="مثال: غرفة 302 أو الطاولة 4">
+              </div>
+              <div>
+                <label>طريقة الدفع</label>
+                <select id="paymentMethodSelect" class="input-field" style="padding:7px 5px;">
+                  <option value="كاش">💵 كاش (Cash)</option>
+                  <option value="فيزا">💳 فيزا (Card)</option>
+                  <option value="إنستاباي">📱 إنستاباي (InstaPay)</option>
+                  <option value="على الغرفة">🏨 تسجيل على الغرفة</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 6px;">
+              <label style="font-size:0.62rem; color:var(--text-muted); display:block; margin-bottom:2px;">التاريخ</label>
+              <input type="date" id="saleDateInput" class="input-field">
+            </div>
+
+            <div id="cartItemsListFull" class="cart-list-full"></div>
+
+            <div class="cart-extras">
+              <div>
+                <label>الخصم (%)</label>
+                <input type="number" id="discountInput" class="input-field" min="0" max="100" value="0">
+              </div>
+              <div>
+                <label style="display:flex; justify-content:space-between;">
+                  <span>الضريبة (%)</span>
+                  <span><input type="checkbox" id="hideTaxCheckbox"> 👁️</span>
+                </label>
+                <input type="number" id="taxInput" class="input-field" min="0" max="100" value="0">
+              </div>
+              <div>
+                <label>اسم الكاشير</label>
+                <input type="text" id="cashierNameInput" class="input-field" value="أسامة أشرف">
+              </div>
+            </div>
+
+            <div class="totals-row">
+              <span>الإجمالي النهائي:</span>
+              <span id="grandTotalDisplay">0 EGP</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1.3fr; gap:6px;">
+              <button id="holdOrderBtn" class="btn btn-dark">⏳ تعليق الأوردر</button>
+              <button id="checkoutBtn" class="btn btn-gold">✅ إتمام ودفع</button>
             </div>
           </div>
-        `;
-      }).join("");
+        </div>
+      </section>
 
-      els.posCartList.querySelectorAll("[data-c-dec]").forEach(b => b.addEventListener("click", () => {
-        const id = b.dataset.cDec;
-        state.cart[id] = Math.max(0, (state.cart[id] || 0) - 1);
-        if (!state.cart[id]) delete state.cart[id];
-        renderPosCart();
-      }));
+      <!-- 2. PENDING ORDERS VIEW -->
+      <section id="view-pending" class="view-section" style="overflow-y: auto;">
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:4px;">📥 الأوردرات القادمة من المنيو الإلكتروني</h3>
+        <div id="menuOrdersList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;"></div>
 
-      els.posCartList.querySelectorAll("[data-c-inc]").forEach(b => b.addEventListener("click", () => {
-        const id = b.dataset.cInc;
-        state.cart[id] = (state.cart[id] || 0) + 1;
-        renderPosCart();
-      }));
-    }
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:4px;">⏳ الأوردرات المعلقة يدوياً</h3>
+        <div id="heldOrdersList" style="display:flex; flex-direction:column; gap:6px;"></div>
+      </section>
 
-    const { subtotal, adjNet, grandTotal } = computeTotals();
-    els.posSubtotalText.textContent = fmtMoney(subtotal);
-    els.posAdjText.textContent = `${adjNet >= 0 ? "+" : ""}${fmtMoney(adjNet)}`;
-    els.posGrandTotalText.textContent = fmtMoney(grandTotal);
+      <!-- 3. REPORTS & CUSTODY VIEW -->
+      <section id="view-reports" class="view-section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <h3 style="font-size:0.92rem; color:var(--gold-main);">التقارير اليومية، الأسبوعية، الشهرية والمخصصة</h3>
+          <div style="display:flex; gap:4px; align-items:center;">
+            <select id="reportPeriodSelect" class="input-field" style="padding:4px 6px; font-size:0.68rem; font-weight:700;">
+              <option value="today">⭐ اليوم فقط</option>
+              <option value="7days">⚡ آخر 7 أيام (أسبوعي)</option>
+              <option value="30days">📊 آخر 30 يوم (شهري)</option>
+              <option value="all">📅 كل الأيام</option>
+              <option value="custom">🎯 فترة محددة (من - إلى)</option>
+            </select>
+            <button id="printReportBtn" class="btn btn-gold no-print" style="padding:4px 6px; font-size:0.68rem;">🖨️</button>
+          </div>
+        </div>
+
+        <div id="customDateRangeBox" class="panel-box no-print" style="display:none; grid-template-columns: 1fr 1fr; gap:6px; padding:6px 10px;">
+          <div>
+            <label style="font-size:0.6rem; color:var(--text-muted);">من تاريخ</label>
+            <input type="date" id="customStartDate" class="input-field" style="padding:4px 6px; font-size:0.75rem;">
+          </div>
+          <div>
+            <label style="font-size:0.6rem; color:var(--text-muted);">إلى تاريخ</label>
+            <input type="date" id="customEndDate" class="input-field" style="padding:4px 6px; font-size:0.75rem;">
+          </div>
+        </div>
+
+        <div class="panel-box no-print" style="display:flex; flex-direction:column; gap:8px; padding:8px 10px;">
+          <div style="font-size:0.72rem; font-weight:800; color:var(--gold-light);">طريقة عرض العملات في التقارير</div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.7rem;">
+            <label style="display:flex; align-items:center; gap:5px;"><input type="radio" name="reportCurrencyMode" value="convert" checked> تحويل كل العملات إلى الجنيه المصري</label>
+            <label style="display:flex; align-items:center; gap:5px;"><input type="radio" name="reportCurrencyMode" value="original"> إبقاء كل عملة كما هي</label>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span style="font-size:0.7rem; font-weight:800; color:var(--gold-light);">سعر صرف اليورو مقابل الجنيه (1 EUR = EGP):</span>
+            <input type="number" id="exchangeRateInput" class="input-field" value="55" min="0.01" step="0.01" style="max-width:90px; text-align:center;">
+          </div>
+          <small style="font-size:0.6rem; color:var(--text-muted);">يُستخدم السعر في التقارير فقط، ويمكنك تعديله في أي وقت.</small>
+        </div>
+
+        <div class="panel-box">
+          <h4 style="font-size:0.82rem; color:var(--gold-light); margin-bottom:8px;">🧾 سجل الفواتير وإدارة ما بعد البيع</h4>
+          <div id="salesHistoryList" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+
+        <div class="panel-box no-print">
+          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;">إدارة العهدة اليومية للدرج</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:6px; align-items:flex-end;">
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);">التاريخ</label>
+              <input type="date" id="custodyDateInput" class="input-field">
+            </div>
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);">المبلغ (EGP)</label>
+              <input type="number" id="custodyAmountInput" class="input-field">
+            </div>
+            <button id="saveCustodyBtn" class="btn btn-gold" style="padding:7px 10px;">حفظ</button>
+          </div>
+        </div>
+
+        <div class="panel-box no-print">
+          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;">تسجيل المصروفات اليومية</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr auto; gap:5px; align-items:flex-end;">
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);">التاريخ</label>
+              <input type="date" id="expenseDateInput" class="input-field">
+            </div>
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);">المبلغ</label>
+              <input type="number" id="expenseAmountInput" class="input-field">
+            </div>
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);">البيان / السبب</label>
+              <input type="text" id="expenseDescInput" class="input-field" placeholder="مثل: مشتريات ثلج">
+            </div>
+            <button id="addExpenseBtn" class="btn btn-gold" style="padding:7px 10px;">إضافة</button>
+          </div>
+        </div>
+
+        <div class="panel-box" style="flex:1; overflow-y:auto;">
+          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;">ملخص الفترة المالي</h4>
+          <table class="data-table">
+            <thead>
+              <tr><th>التاريخ</th><th>الطلبات</th><th>العهدة</th><th>المصروفات</th><th>المبيعات</th></tr>
+            </thead>
+            <tbody id="dailyBreakdownBody"></tbody>
+            <tfoot id="dailyBreakdownFoot"></tfoot>
+          </table>
+        </div>
+
+        <div class="panel-box" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; text-align:center;">
+          <div>
+            <div style="font-size:0.65rem; color:var(--text-muted);">إجمالي المبيعات للفترة</div>
+            <div id="statTotalSalesVal" style="font-size:0.95rem; font-weight:900; color:var(--gold-main);">0 EGP</div>
+          </div>
+          <div>
+            <div style="font-size:0.65rem; color:var(--text-muted);">الصافي بالدرج (الخزينة)</div>
+            <div id="statNetDrawerVal" style="font-size:0.95rem; font-weight:900; color:var(--success);">0 EGP</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. SETTINGS VIEW -->
+      <section id="view-settings" class="view-section">
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;">إعدادات النظام والشركة</h3>
+        <div class="panel-box" style="display:flex; flex-direction:column; gap:8px;">
+          <div>
+            <label style="font-size:0.68rem; color:var(--text-muted);">اسم المشروع / الشركة</label>
+            <input type="text" id="settingCompanyName" class="input-field" value="FRESHLY & PREMIER">
+          </div>
+          <div>
+            <label style="font-size:0.68rem; color:var(--text-muted);">التصنيف الفرعي</label>
+            <input type="text" id="settingSubtitle" class="input-field" value="PREMIER BEVERIDGE CO">
+          </div>
+          
+          <!-- إضافة خيار تخصيص ورفع صوت التنبيه من الهاتف -->
+          <div style="border-top: 1px solid var(--border-subtle); padding-top:6px; margin-top:4px;">
+            <label style="font-size:0.68rem; color:var(--gold-light); display:block; margin-bottom:4px;">🔔 تغيير نغمة تنبيه الأوردرات (اختر ملف صوتي من الموبايل)</label>
+            <input type="file" id="customAudioInput" accept="audio/*" class="input-field" style="font-size:0.7rem; padding:4px;">
+          </div>
+
+          <button id="saveSettingsBtn" class="btn btn-gold" style="margin-top:4px;">💾 حفظ الإعدادات</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="nav-bar">
+      <button class="nav-btn active" data-tab="pos"><span class="icon">🧾</span><span>POS</span></button>
+      <button class="nav-btn" data-tab="pending"><span class="icon">⏳</span><span>المعلقة</span><span id="pendingBadge" class="badge-count">0</span></button>
+      <button class="nav-btn" data-tab="reports"><span class="icon">📊</span><span>التقارير</span></button>
+      <button class="nav-btn" data-tab="menu" onclick="window.open('https://osama14492.github.io/FRESHLY-MENU-/', '_blank')"><span class="icon">📱</span><span>المنيو</span></button>
+      <button class="nav-btn" data-tab="settings"><span class="icon">⚙️</span><span>الإعدادات</span></button>
+    </nav>
+
+  </div>
+
+<script>
+  // تهيئة Firebase Realtime Database
+  const firebaseConfig = {
+  apiKey: "AIzaSyBMH6XnDvVzd_bRYdjq3AKWMq0IqP7F8WU",
+  authDomain: "freshly-pos.firebaseapp.com",
+  databaseURL: "https://freshly-pos-default-rtdb.firebaseio.com",
+  projectId: "freshly-pos",
+  storageBucket: "freshly-pos.firebasestorage.app",
+  messagingSenderId: "92150322225",
+  appId: "1:92150322225:web:ced60779ef510197863110",
+  measurementId: "G-E4CRKEHSXF"
+};
+  if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  const rtdb = firebase.database();
+
+document.addEventListener('DOMContentLoaded', () => {
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const DEFAULT_ITEMS = [
+    { id: 'm1', names: { ar: 'ميلك شيك مانجو فاخر', en: 'Mango Milkshake' }, priceEGP: 350, priceEUR: 7 },
+    { id: 'm2', names: { ar: 'ميلك شيك فراولة', en: 'Strawberry Milkshake' }, priceEGP: 320, priceEUR: 6 },
+    { id: 'c1', names: { ar: 'آيس سبانيش لاتي', en: 'Iced Spanish Latte' }, priceEGP: 300, priceEUR: 6 },
+    { id: 'j1', names: { ar: 'عصير مانجو فريش', en: 'Fresh Mango Juice' }, priceEGP: 250, priceEUR: 5 }
+  ];
+
+  function loadState() {
+    return {
+      lang: localStorage.getItem('fp_lang') || 'ar',
+      currency: localStorage.getItem('fp_currency') || 'EGP',
+      items: JSON.parse(localStorage.getItem('fp_items_v3') || JSON.stringify(DEFAULT_ITEMS)),
+      sales: JSON.parse(localStorage.getItem('fp_sales_v3') || '[]'),
+      held: JSON.parse(localStorage.getItem('fp_held_v3') || '[]'),
+      custodyByDate: JSON.parse(localStorage.getItem('fp_custody_v3') || JSON.stringify({ [todayStr]: 1000 })),
+      expensesByDate: JSON.parse(localStorage.getItem('fp_expenses_v3') || '{}'),
+      customAlertSound: localStorage.getItem('fp_custom_sound') || 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
+      cart: []
+    };
   }
 
-  function renderSalesSummary() {
-    const eurRate = Math.max(1, Number(els.eurRateInput.value || 55));
-    let totalEgp = 0;
-    state.sales.forEach(s => {
-      const val = Number(s.total || 0);
-      totalEgp += (s.currency === "EUR") ? val * eurRate : val;
-    });
-    els.salesSummaryText.textContent = `${state.lang === "ar" ? "مبيعات اليوم:" : "Today Sales:"} ${Math.round(totalEgp)} EGP (${state.sales.length})`;
+  let state = loadState();
+
+  function persistState() {
+    localStorage.setItem('fp_lang', state.lang);
+    localStorage.setItem('fp_currency', state.currency);
+    localStorage.setItem('fp_sales_v3', JSON.stringify(state.sales));
+    localStorage.setItem('fp_held_v3', JSON.stringify(state.held));
+    localStorage.setItem('fp_custody_v3', JSON.stringify(state.custodyByDate));
+    localStorage.setItem('fp_expenses_v3', JSON.stringify(state.expensesByDate));
+    localStorage.setItem('fp_custom_sound', state.customAlertSound);
   }
 
-  async function updateOrderStatus(code, status) {
-    const nowIso = new Date().toISOString();
-    const updates = {};
-    updates[`pendingOrders/${code}/status`] = status;
-    updates[`pendingOrders/${code}/updatedAt`] = nowIso;
-    updates[`orderTracking/${code}/status`] = status;
-    updates[`orderTracking/${code}/updatedAt`] = nowIso;
-
-    await lanDb.ref().update(updates);
-    if (dbConnected && networkOnline) {
-      try {
-        await db.ref().update(updates);
-      } catch (_) {}
-    }
-    if (state.pendingOrders[code]) {
-      state.pendingOrders[code].status = status;
-    }
-    renderPendingOrders();
-    showToast(`${code} -> ${status}`);
+  function formatMoney(amount) {
+    const num = Number(amount || 0);
+    const clean = Number.isInteger(num) ? num.toString() : num.toFixed(2);
+    return state.currency === 'EGP' ? `${clean} EGP` : `${clean} €`;
   }
 
-  function loadPendingOrderToPos(code) {
-    const ord = state.pendingOrders[code];
-    if (!ord) return;
-    state.cart = {};
-    (ord.items || []).forEach(it => {
-      const matched = PRODUCTS.find(p => p.id === it.id || p.nameAr === (it.nameAr || it.name));
-      if (matched) {
-        state.cart[matched.id] = Number(it.qty || 1);
+  function getItemTitle(item) {
+    if (!item) return '';
+    return item.names ? (item.names[state.lang] || item.names.ar) : (item.name || '');
+  }
+
+  function getUnitPrice(item) {
+    if (!item) return 0;
+    return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
+  }
+
+  // **إعداد وتشغيل صوت التنبيه**
+  const audioPlayer = document.getElementById('orderAlertSound');
+  if (state.customAlertSound) {
+    audioPlayer.src = state.customAlertSound;
+  }
+
+  function playAlertSound() {
+    if (audioPlayer) {
+      audioPlayer.currentTime = 0;
+      audioPlayer.play().catch(e => console.log("Audio play blocked until user interacts"));
+    }
+  }
+
+  // ربط اختيار ملف صوتي جديد من الموبايل
+  document.getElementById('customAudioInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        state.customAlertSound = evt.target.result;
+        audioPlayer.src = state.customAlertSound;
+        persistState();
+        alert('🎵 تم تغيير وصفظ نغمة التنبيه بنجاح!');
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // **استماع وتحديث فوري للأوردرات القادمة من مجلد pendingOrders في قاعدة البيانات**
+  rtdb.ref('pendingOrders').on('child_added', (snapshot) => {
+    const onlineOrder = snapshot.val();
+    if (onlineOrder) {
+      const orderId = onlineOrder.id || snapshot.key;
+      if (!state.sales.some(s => s.id === orderId) && !state.held.some(o => o.id === orderId)) {
+        let rawTotal = onlineOrder.total || 0;
+        if (typeof rawTotal === 'string') {
+          rawTotal = Number(rawTotal.replace(/[^0-9.]/g, '')) || 0;
+        }
+
+        state.held.unshift({
+          id: orderId,
+          customer: onlineOrder.customer || 'طلب من المنيو الإلكتروني',
+          date: onlineOrder.date || todayStr,
+          currency: 'EGP',
+          cart: onlineOrder.cart || [],
+          total: rawTotal,
+          paymentMethod: onlineOrder.paymentMethod || 'كاش',
+          status: onlineOrder.status || 'pending'
+        });
+        persistState();
+        renderHeldOrders();
+        playAlertSound();
+        alert('🚨 وصل أوردر جديد من المنيو (' + orderId + ') وتم إضافته للأوردرات المعلقة بنجاح!');
       }
-    });
-    if (ord.currency) {
-      state.currency = ord.currency;
-      els.currencySelect.value = ord.currency;
-      renderProducts();
     }
-    els.tableOrRoomInput.value = `${ord.tableOrRoom || ord.location || ""} ${ord.notes ? `(${ord.notes})` : ""}`.trim();
-    renderPosCart();
-    showToast(`${code}`);
-  }
+  });
 
-  function renderPendingOrders() {
-    const isAr = state.lang === "ar";
-    const list = Object.values(state.pendingOrders || {}).filter(Boolean);
-    els.pendingCountText.textContent = list.length;
+  // جلب الأوردرات المعلقة الموجودة مسبقاً داخل مجلد pendingOrders عند فتح التطبيق
+  rtdb.ref('pendingOrders').once('value', (snapshot) => {
+    const allOrders = snapshot.val();
+    if (allOrders) {
+      Object.keys(allOrders).forEach(key => {
+        const onlineOrder = allOrders[key];
+        if (onlineOrder) {
+          const orderId = onlineOrder.id || key;
+          if (!state.held.some(o => o.id === orderId) && !state.sales.some(s => s.id === orderId)) {
+            let rawTotal = onlineOrder.total || 0;
+            if (typeof rawTotal === 'string') {
+              rawTotal = Number(rawTotal.replace(/[^0-9.]/g, '')) || 0;
+            }
+            state.held.unshift({
+              id: orderId,
+              customer: onlineOrder.customer || 'طلب من المنيو الإلكتروني',
+              date: onlineOrder.date || todayStr,
+              currency: 'EGP',
+              cart: onlineOrder.cart || [],
+              total: rawTotal,
+              paymentMethod: onlineOrder.paymentMethod || 'كاش',
+              status: onlineOrder.status || 'pending'
+            });
+          }
+        }
+      });
+      persistState();
+      renderHeldOrders();
+    }
+  });
 
-    if (!list.length) {
-      els.pendingOrdersList.innerHTML = `<div style="color:var(--muted); font-size:12.5px; text-align:center; padding:14px;">${isAr ? "لا توجد طلبات واردة حالياً" : "No pending menu orders"}</div>`;
+  window.addItemPrompt = function() {
+    const name = prompt("أدخل اسم الصنف:");
+    if (!name) return;
+    const price = Number(prompt("السعر (EGP):", "300") || 300);
+    const id = 'custom_' + Date.now();
+    state.items.push({ id, names: { ar: name, en: name }, priceEGP: price, priceEUR: price / 55 });
+    state.cart.push({ itemId: id, qty: 1, size: 'كبير', sugar: 'عادي', ice: 'وسط', note: '' });
+    renderCartFull();
+  };
+
+  function renderCartFull() {
+    const list = document.getElementById('cartItemsListFull');
+    if (state.cart.length === 0) {
+      list.innerHTML = `<div class="cart-empty">الفاتورة فارغة</div>`;
+      document.getElementById('grandTotalDisplay').textContent = formatMoney(0);
       return;
     }
 
-    els.pendingOrdersList.innerHTML = list.map(ord => {
-      const st = ord.status || "pending";
-      const badgeCls = st === "ready" ? "b-ready" : (st === "preparing" ? "b-preparing" : (st === "delivered" ? "b-delivered" : "b-pending"));
-      const itemsTxt = (ord.items || []).map(i => `${i.nameAr || i.name} ×${i.qty}`).join(" • ");
+    let subtotal = 0;
+    list.innerHTML = state.cart.map((c, idx) => {
+      const item = state.items.find(i => i.id === c.itemId || i.id === c.id);
+      const title = item ? getItemTitle(item) : (c.name || 'صنف من المنيو');
+      const unit = item ? getUnitPrice(item) : Number(c.price || 0);
+      subtotal += unit * c.qty;
+
       return `
-        <div class="pending-card">
-          <div class="pending-top">
-            <span>${ord.code} • ${ord.customerName || ""} ${ord.location ? `(${ord.location})` : ""}</span>
-            <span class="badge ${badgeCls}">${st}</span>
+        <div class="cart-row-detailed">
+          <div class="cart-row-top">
+            <span class="cart-item-name">${title}</span>
+            <button class="btn btn-danger" style="padding:1px 5px; font-size:0.6rem;" onclick="state.cart.splice(${idx},1); renderCartFull();">✕</button>
           </div>
-          <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">${itemsTxt}</div>
-          <div style="font-size:12.5px; color:var(--gold-2); font-weight:800; margin-top:4px;">${fmtMoney(ord.total, ord.currency || "EGP")}</div>
-          ${ord.rating ? `<div style="font-size:11.5px; color:#fbbf24; margin-top:3px;">⭐ ${ord.rating.stars}/5 ${ord.rating.comment ? `- ${ord.rating.comment}` : ""}</div>` : ""}
-          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
-            <button type="button" class="btn" data-st-code="${ord.code}" data-st="preparing">👨‍🍳 تحضير</button>
-            <button type="button" class="btn" data-st-code="${ord.code}" data-st="ready">✅ جاهز</button>
-            <button type="button" class="btn" data-st-code="${ord.code}" data-st="delivered">🍽️ تم التوصيل</button>
-            <button type="button" class="btn btn-gold" data-load-code="${ord.code}">🧾 للفاتورة</button>
+          <div class="item-options-grid">
+            <select onchange="state.cart[${idx}].size=this.value">
+              <option value="كبير" ${c.size==='كبير'?'selected':''}>كبير</option>
+              <option value="وسط" ${c.size==='وسط'?'selected':''}>وسط</option>
+            </select>
+            <select onchange="state.cart[${idx}].sugar=this.value">
+              <option value="عادي" ${c.sugar==='عادي'?'selected':''}>سكر عادي</option>
+              <option value="بدون" ${c.sugar==='بدون'?'selected':''}>بدون سكر</option>
+            </select>
+            <select onchange="state.cart[${idx}].ice=this.value">
+              <option value="وسط" ${c.ice==='وسط'?'selected':''}>ثلج وسط</option>
+              <option value="بدون" ${c.ice==='بدون'?'selected':''}>بدون ثلج</option>
+            </select>
+          </div>
+          <div class="cart-row-bottom">
+            <span style="color:var(--text-muted); font-size:0.7rem;">الفردي: ${formatMoney(unit)}</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="qty-btn" onclick="state.cart[${idx}].qty--; if(state.cart[${idx}].qty<=0)state.cart.splice(${idx},1); renderCartFull();">-</button>
+              <span style="font-weight:900; color:var(--gold-light);">${c.qty}</span>
+              <button class="qty-btn" onclick="state.cart[${idx}].qty++; renderCartFull();">+</button>
+              <span style="color:var(--gold-main); font-weight:900;">${formatMoney(unit * c.qty)}</span>
+            </div>
           </div>
         </div>
       `;
-    }).join("");
+    }).join('');
 
-    els.pendingOrdersList.querySelectorAll("[data-st-code]").forEach(btn => {
-      btn.addEventListener("click", () => updateOrderStatus(btn.dataset.stCode, btn.dataset.st));
-    });
-
-    els.pendingOrdersList.querySelectorAll("[data-load-code]").forEach(btn => {
-      btn.addEventListener("click", () => loadPendingOrderToPos(btn.dataset.loadCode));
-    });
+    const disc = Number(document.getElementById('discountInput').value || 0);
+    const tax = document.getElementById('hideTaxCheckbox').checked ? 0 : Number(document.getElementById('taxInput').value || 0);
+    const total = (subtotal * (1 - disc / 100)) * (1 + tax / 100);
+    document.getElementById('grandTotalDisplay').textContent = formatMoney(total);
   }
 
-  els.checkoutBtn.addEventListener("click", () => {
-    const { subtotal, grandTotal } = computeTotals();
-    if (grandTotal <= 0) {
-      showToast(state.lang === "ar" ? "الفاتورة فارغة" : "Invoice is empty");
-      return;
-    }
+  document.getElementById('checkoutBtn').addEventListener('click', () => {
+    if (state.cart.length === 0) return alert('الفاتورة فارغة');
+    const customer = document.getElementById('customerNameInput').value.trim() || 'كاشير عام';
+    let subtotal = 0;
+    state.cart.forEach(c => {
+      const item = state.items.find(i => i.id === c.itemId || i.id === c.id);
+      const unit = item ? getUnitPrice(item) : Number(c.price || 0);
+      subtotal += unit * c.qty;
+    });
 
     const sale = {
-      id: `SALE-${Date.now().toString().slice(-6)}`,
+      id: 'SALE-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      customer,
+      date: document.getElementById('saleDateInput').value || todayStr,
+      cart: JSON.parse(JSON.stringify(state.cart)),
+      total: subtotal,
+      netTotal: subtotal,
+      originalTotal: subtotal,
+      currency: state.currency || 'EGP',
+      paymentMethod: document.getElementById('paymentMethodSelect').value,
+      cashier: document.getElementById('cashierNameInput').value.trim(),
       createdAt: new Date().toISOString(),
-      cashier: els.cashierNameInput.value.trim() || "أسامة أشرف",
-      paymentMethod: els.paymentMethodSelect.value,
-      currency: state.currency,
-      subtotal,
-      total: grandTotal,
-      ref: els.tableOrRoomInput.value.trim()
+      adjustments: []
     };
 
     state.sales.unshift(sale);
-    localStorage.setItem("freshly_pos_sales", JSON.stringify(state.sales));
-    state.cart = {};
-    els.discountInput.value = "0";
-    els.taxInput.value = "0";
-    els.tableOrRoomInput.value = "";
-    renderPosCart();
-    renderSalesSummary();
-    showToast(state.lang === "ar" ? `تم تسجيل الفاتورة: ${fmtMoney(grandTotal)}` : `Saved invoice: ${fmtMoney(grandTotal)}`);
+    if (activeWebOrderId) {
+      const delivered = {status:'delivered', deliveredAt:new Date().toISOString(), updatedAt:new Date().toISOString()};
+      rtdb.ref('orderTracking/' + activeWebOrderId).update(delivered).catch(err => console.error('Tracking completion update failed:', err));
+      rtdb.ref('pendingOrders/' + activeWebOrderId).remove().catch(err => console.error('Pending order removal failed:', err));
+      activeWebOrderId = null;
+    }
+    if (lastAutoLoadedOrderId) {
+      const completedHeldId = lastAutoLoadedOrderId;
+      state.held = state.held.filter(order => order.id !== completedHeldId);
+      if (String(completedHeldId).startsWith('WEB-')) {
+        rtdb.ref('pendingOrders/' + completedHeldId).remove().catch(err => console.error('Error completing pending order:', err));
+      }
+      lastAutoLoadedOrderId = null;
+    }
+    persistState();
+    showReceiptModal(sale);
+    state.cart = [];
+    document.getElementById('customerNameInput').value = '';
+    renderCartFull();
+    renderReports();
   });
 
-  els.clearPosCartBtn.addEventListener("click", () => {
-    state.cart = {};
-    renderPosCart();
-  });
-
-  els.currencySelect.addEventListener("change", () => {
-    state.currency = els.currencySelect.value;
-    localStorage.setItem("freshly_pos_currency", state.currency);
-    renderProducts();
-    renderPosCart();
-  });
-
-  els.langToggleBtn.addEventListener("click", () => {
-    state.lang = state.lang === "ar" ? "en" : "ar";
-    localStorage.setItem("freshly_pos_lang", state.lang);
-    document.documentElement.lang = state.lang;
-    document.documentElement.dir = state.lang === "ar" ? "rtl" : "ltr";
-    els.langToggleBtn.textContent = state.lang === "ar" ? "🌐 EN" : "🌐 AR";
-    renderProducts();
-    renderPosCart();
-    renderPendingOrders();
-    renderSalesSummary();
-    updateConnectionBadge();
-  });
-
-  els.syncNowBtn.addEventListener("click", () => {
-    state.pendingOrders = getLanPathValue("pendingOrders") || {};
-    renderPendingOrders();
-    renderSalesSummary();
-    showToast(state.lang === "ar" ? "تمت المزامنة" : "Synced");
-  });
-
-  els.waReportBtn.addEventListener("click", () => {
-    const eurRate = Math.max(1, Number(els.eurRateInput.value || 55));
-    let totalEgp = 0;
-    state.sales.forEach(s => {
-      const v = Number(s.total || 0);
-      totalEgp += s.currency === "EUR" ? v * eurRate : v;
+  document.getElementById('holdOrderBtn').addEventListener('click', () => {
+    if (state.cart.length === 0) return alert('الفاتورة فارغة');
+    state.held.unshift({
+      id: 'HELD-' + Math.floor(100 + Math.random() * 900),
+      customer: document.getElementById('customerNameInput').value.trim() || 'معلق',
+      date: todayStr,
+      cart: [...state.cart],
+      total: 0
     });
-    const text = encodeURIComponent(
-      `📊 *تقرير مبيعات FRESHLY & PREMIER*
-الكاشير: ${els.cashierNameInput.value || "أسامة أشرف"}
-عدد الفواتير: ${state.sales.length}
-الإجمالي التقديري: ${Math.round(totalEgp)} EGP`
-    );
-    window.open(`https://wa.me/${WHATSAPP_REPORT_TARGET}?text=${text}`, "_blank");
+    persistState();
+    state.cart = [];
+    renderCartFull();
+    renderHeldOrders();
+    alert('تم تعليق الأوردر بنجاح ⏳');
   });
 
-  [els.discountInput, els.taxInput, els.eurRateInput].forEach(inp => {
-    inp.addEventListener("input", () => {
-      renderPosCart();
-      renderSalesSummary();
-    });
+  function renderHeldOrders() {
+    const menuContainer = document.getElementById('menuOrdersList');
+    const heldContainer = document.getElementById('heldOrdersList');
+    const badge = document.getElementById('pendingBadge');
+    
+    badge.textContent = state.held.length;
+    badge.style.display = state.held.length > 0 ? 'inline-block' : 'none';
+
+    const menuOrders = state.held.filter(o => String(o.id).startsWith('WEB-'));
+    const heldOrders = state.held.filter(o => !String(o.id).startsWith('WEB-'));
+
+    if (menuOrders.length === 0) {
+      menuContainer.innerHTML = `<div class="cart-empty" style="padding:10px;">لا توجد أوردرات قادمة من المنيو</div>`;
+    } else {
+      menuContainer.innerHTML = menuOrders.map(ord => `
+        <div class="panel-box" style="display:flex; justify-content:space-between; align-items:center; padding:8px; margin-bottom:0;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">📍 ${ord.customer} (${ord.id})</div>
+            <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — المجموع: ${formatMoney(ord.total || 0)}</div>
+            <select aria-label="حالة الأوردر" onchange="updateOrderTrackingStatus('${ord.id}',this.value)" style="margin-top:5px;background:var(--bg-input);color:var(--gold-light);border:1px solid var(--border-gold);border-radius:5px;padding:4px;font-size:.68rem;max-width:150px;">
+              <option value="pending" ${(ord.status||'pending')==='pending'?'selected':''}>📥 تم الاستلام</option>
+              <option value="preparing" ${ord.status==='preparing'?'selected':''}>👨‍🍳 قيد التجهيز</option>
+              <option value="ready" ${ord.status==='ready'?'selected':''}>✅ جاهز للاستلام</option>
+            </select>
+          </div>
+          <div style="display:flex; gap:4px;align-items:center;">
+            <button class="btn btn-gold" style="padding:6px 10px; font-size:0.75rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 مراجعة وإتمام</button>
+            <button class="btn btn-danger" style="padding:6px 8px; font-size:0.7rem;" onclick="removeHeld('${ord.id}')">✕</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    if (heldOrders.length === 0) {
+      heldContainer.innerHTML = `<div class="cart-empty" style="padding:10px;">لا توجد أوردرات معلقة يدوياً</div>`;
+    } else {
+      heldContainer.innerHTML = heldOrders.map(ord => `
+        <div class="panel-box" style="display:flex; justify-content:space-between; align-items:center; padding:8px; margin-bottom:0;">
+          <div>
+            <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">📍 ${ord.customer} (${ord.id})</div>
+            <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — المجموع: ${formatMoney(ord.total || 0)}</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-gold" style="padding:6px 10px; font-size:0.75rem;" onclick="loadHeldOrderToCart('${ord.id}')">📥 مراجعة وإتمام</button>
+            <button class="btn btn-danger" style="padding:6px 8px; font-size:0.7rem;" onclick="removeHeld('${ord.id}')">✕</button>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  window.updateOrderTrackingStatus = function(id, status) {
+    const allowed = ['pending','preparing','ready'];
+    if (!allowed.includes(status) || !String(id).startsWith('WEB-')) return;
+    const order = state.held.find(o => o.id === id);
+    if (order) order.status = status;
+    const payload = {status, updatedAt: new Date().toISOString()};
+    rtdb.ref('orderTracking/' + id).update(payload).catch(err => console.error('Tracking status update failed:', err));
+    rtdb.ref('pendingOrders/' + id).update(payload).catch(err => console.error('Pending order status update failed:', err));
+    renderHeldOrders();
+  };
+
+  window.loadHeldOrderToCart = function(id, keepInPending = false) {
+    const ord = state.held.find(o => o.id === id);
+    if (!ord) return;
+    activeWebOrderId = String(id).startsWith('WEB-') ? id : null;
+    if (activeWebOrderId && ord.status !== 'ready') {
+      const preparing = {status:'preparing', updatedAt:new Date().toISOString()};
+      rtdb.ref('orderTracking/' + id).update(preparing).catch(err => console.error('Tracking status update failed:', err));
+      rtdb.ref('pendingOrders/' + id).update(preparing).catch(() => {});
+    }
+
+    // Keep web orders in Firebase and in the pending list until checkout succeeds.
+    // This prevents losing an order if the cashier closes the page before payment.
+
+    state.cart = (ord.cart || []).map(c => ({
+      itemId: c.itemId || c.id,
+      id: c.id || c.itemId,
+      name: c.name || '',
+      qty: Number(c.qty || 1),
+      size: c.size || 'كبير',
+      sugar: c.sugar || 'عادي',
+      ice: c.ice || 'وسط',
+      price: Number(c.price || 0),
+      note: c.note || ''
+    }));
+
+    if (ord.customer) {
+      document.getElementById('customerNameInput').value = ord.customer;
+    }
+
+    if (ord.paymentMethod) {
+      const paySelect = document.getElementById('paymentMethodSelect');
+      if (paySelect) {
+        paySelect.value = ord.paymentMethod;
+      }
+    }
+
+    if (String(id).startsWith('WEB-')) {
+      lastAutoLoadedOrderId = id;
+    } else if (!keepInPending) {
+      state.held = state.held.filter(o => o.id !== id);
+      lastAutoLoadedOrderId = null;
+    }
+    persistState();
+    renderHeldOrders();
+    renderCartFull();
+    switchTab('pos');
+    if (String(id).startsWith('WEB-')) {
+      alert('📥 تم تحميل الطلب إلى الفاتورة. سيظل محفوظاً في الطلبات حتى إتمام الدفع.');
+    } else if (!keepInPending) {
+      alert('📥 تم تحميل الأوردر إلى شاشة الكاشير بنجاح!');
+    }
+  };
+
+
+  // البحث التلقائي في الأوردرات المعلقة برقم الغرفة أو الطاولة أو اسم العميل.
+  function normalizeOrderLookup(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/ة/g, 'ه')
+      .replace(/[ً-ٰٟ]/g, '')
+      .replace(/[\s\-_#.,:؛،/\\]+/g, '');
+  }
+
+  function getOrderLookupValues(order) {
+    const values = [
+      order.customer, order.customerName, order.name,
+      order.room, order.roomNumber, order.roomNo, order.room_number,
+      order.table, order.tableNumber, order.tableNo, order.table_number,
+      order.roomName, order.tableName
+    ];
+    return values.filter(value => value !== undefined && value !== null && String(value).trim() !== '');
+  }
+
+  function findMatchingHeldOrder(value) {
+    const query = normalizeOrderLookup(value);
+    if (!query) return null;
+
+    const orders = state.held.map(order => ({ order, values: getOrderLookupValues(order).map(normalizeOrderLookup) }));
+    let matches = orders.filter(entry => entry.values.some(candidate => candidate === query));
+    if (matches.length === 1) return matches[0].order;
+    if (matches.length > 1) return null;
+
+    // السماح بإدخال رقم الغرفة/الطاولة وحده إذا كان رقماً مميزاً في بيانات الأوردر.
+    const queryDigits = query.replace(/\D/g, '');
+    if (queryDigits.length >= 2) {
+      matches = orders.filter(entry => entry.values.some(candidate => {
+        const candidateDigits = candidate.replace(/\D/g, '');
+        return candidateDigits && candidateDigits === queryDigits;
+      }));
+      if (matches.length === 1) return matches[0].order;
+      if (matches.length > 1) return null;
+    }
+
+    // دعم الاسم الجزئي عند تميّزه في أوردر واحد فقط.
+    if (query.length >= 3) {
+      matches = orders.filter(entry => entry.values.some(candidate => candidate.includes(query)));
+      if (matches.length === 1) return matches[0].order;
+    }
+    return null;
+  }
+
+  let lastAutoLoadedOrderId = null;
+  let activeWebOrderId = null;
+  const customerLookupInput = document.getElementById('customerNameInput');
+  function autoLoadMatchingHeldOrder() {
+    const typedValue = customerLookupInput.value;
+    const match = findMatchingHeldOrder(typedValue);
+    if (!match) {
+      lastAutoLoadedOrderId = null;
+      return;
+    }
+    if (match.id === lastAutoLoadedOrderId) return;
+    lastAutoLoadedOrderId = match.id;
+    // عرض تفاصيل الأوردر في الفاتورة دون حذفه من قائمة المعلّق أو قاعدة البيانات.
+    window.loadHeldOrderToCart(match.id, true);
+    customerLookupInput.value = typedValue;
+  }
+  customerLookupInput.addEventListener('input', autoLoadMatchingHeldOrder);
+  customerLookupInput.addEventListener('change', autoLoadMatchingHeldOrder);
+
+  window.removeHeld = function(id) {
+    if (String(id).startsWith('WEB-')) {
+      rtdb.ref('pendingOrders/' + id).remove().catch(err => {
+        console.error("Error removing order from Firebase:", err);
+      });
+    }
+    state.held = state.held.filter(o => o.id !== id);
+    persistState();
+    renderHeldOrders();
+  };
+
+  function renderSalesHistory() {
+    const host = document.getElementById('salesHistoryList');
+    if (!host) return;
+    const rows = state.sales.slice(0, 60);
+    if (!rows.length) { host.innerHTML = '<div class="cart-empty">لا توجد فواتير مسجلة</div>'; return; }
+    host.innerHTML = rows.map(s => {
+      const net = Number(s.netTotal !== undefined ? s.netTotal : s.total || 0);
+      const cancelled = !!s.cancelled;
+      return `<div style="border:1px solid var(--border-subtle);border-radius:8px;padding:8px;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+        <div style="min-width:0;flex:1"><b>${s.id}</b><div style="font-size:.68rem;color:var(--text-muted)">${s.date || ''} · ${s.customer || ''} · ${formatMoney(net)} ${cancelled?'· ملغاة':''}</div></div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn btn-dark" style="padding:5px 7px;font-size:.68rem" onclick="viewSaleInvoice('${s.id}')">عرض</button>
+          <button class="btn btn-gold" style="padding:5px 7px;font-size:.68rem" onclick="editSaleItems('${s.id}')">تعديل الأصناف</button>
+          <button class="btn btn-dark" style="padding:5px 7px;font-size:.68rem" onclick="adjustSale('${s.id}')">مرتجع</button>
+          <button class="btn btn-danger" style="padding:5px 7px;font-size:.68rem" onclick="cancelSale('${s.id}')" ${cancelled?'disabled':''}>إلغاء</button>
+        </div></div>`;
+    }).join('');
+  }
+  function getSaleById(id) { return state.sales.find(s => s.id === id); }
+  window.viewSaleInvoice = function(id) {
+    const s = getSaleById(id); if (!s) return;
+    const lines = (s.cart || []).map(c => `${c.name || c.itemName || c.itemId || c.id || 'صنف'} × ${c.qty || 1}`).join('\n');
+    alert(`فاتورة ${s.id}\nالعميل: ${s.customer || ''}\nالتاريخ: ${s.date || ''}\n${lines}\nالإجمالي الأصلي: ${formatMoney(s.originalTotal ?? s.total)}\nالصافي الحالي: ${formatMoney(s.netTotal ?? s.total)}\n${s.cancelled?'ملغاة':''}`);
+  };
+  window.editSaleItems = function(id) {
+    const s = getSaleById(id); if (!s || s.cancelled) return;
+    const currentCart = (s.cart || []).map(c => ({
+      itemId: c.itemId || c.id || '', name: c.name || c.itemName || '',
+      qty: Number(c.qty || 1), price: Number(c.price || 0),
+      size: c.size || 'كبير', sugar: c.sugar || 'عادي', ice: c.ice || 'وسط', note: c.note || ''
+    }));
+    const template = JSON.stringify(currentCart, null, 2);
+    const raw = prompt('تعديل أصناف الفاتورة. عدّل القائمة بصيغة JSON، ويمكنك إضافة أو حذف صنف أو تغيير الكمية والسعر.\nالحقول: itemId, name, qty, price, size, sugar, ice, note', template);
+    if (raw === null) return;
+    let next;
+    try { next = JSON.parse(raw); } catch (e) { alert('صيغة JSON غير صحيحة. لم يتم تعديل الفاتورة.'); return; }
+    if (!Array.isArray(next) || !next.length) { alert('يجب أن تحتوي الفاتورة على صنف واحد على الأقل. استخدم الإلغاء إذا أردت إلغاء الفاتورة بالكامل.'); return; }
+    const valid = next.every(c => c && Number(c.qty) > 0 && Number(c.price) >= 0 && (c.name || c.itemId));
+    if (!valid) { alert('تأكد من وجود اسم أو معرف لكل صنف، وكمية أكبر من صفر، وسعر غير سالب.'); return; }
+    const newTotal = next.reduce((sum,c) => sum + Number(c.qty) * Number(c.price), 0);
+    const reason = prompt('سبب تعديل الفاتورة:');
+    if (!reason || !reason.trim()) { alert('يجب تسجيل سبب التعديل. لم يتم الحفظ.'); return; }
+    if (!s.originalSnapshot) s.originalSnapshot = JSON.parse(JSON.stringify(s));
+    const previousTotal = Number(s.netTotal !== undefined ? s.netTotal : s.total || 0);
+    s.adjustments = Array.isArray(s.adjustments) ? s.adjustments : [];
+    s.adjustments.push({type:'items_edited', reason:reason.trim(), previousCart:JSON.parse(JSON.stringify(s.cart || [])), previousNetTotal:previousTotal, newCart:JSON.parse(JSON.stringify(next)), newTotal, at:new Date().toISOString()});
+    s.cart = next; s.total = newTotal; s.netTotal = newTotal;
+    persistState(); renderReports(); renderSalesHistory();
+    alert('تم تعديل أصناف الفاتورة وإعادة حساب الإجمالي مع حفظ النسخة الأصلية وسجل التعديل.');
+  };
+
+  window.adjustSale = function(id) {
+    const s = getSaleById(id); if (!s || s.cancelled) return;
+    const current = Number(s.netTotal !== undefined ? s.netTotal : s.total || 0);
+    const raw = prompt(`أدخل قيمة المرتجع/التخفيض من الفاتورة ${id} (${s.currency || 'EGP'}).\nالصافي الحالي: ${current}`, '0');
+    if (raw === null) return;
+    const amount = Number(raw);
+    if (!Number.isFinite(amount) || amount < 0 || amount > current) { alert('قيمة غير صحيحة. يجب أن تكون بين صفر والصافي الحالي.'); return; }
+    if (!amount) return;
+    const reason = prompt('سبب المرتجع أو التعديل:');
+    if (!reason || !reason.trim()) { alert('يجب تسجيل السبب. لم يتم الحفظ.'); return; }
+    if (!s.originalSnapshot) s.originalSnapshot = JSON.parse(JSON.stringify(s));
+    s.adjustments = Array.isArray(s.adjustments) ? s.adjustments : [];
+    s.adjustments.push({type:'refund_or_reduction', amount, reason:reason.trim(), at:new Date().toISOString()});
+    s.netTotal = Math.max(0, current - amount);
+    s.refundedTotal = Number(s.refundedTotal || 0) + amount;
+    persistState(); renderReports(); renderSalesHistory();
+    alert('تم تسجيل المرتجع مع الاحتفاظ ببيانات الفاتورة الأصلية وسجل التعديلات.');
+  };
+  window.cancelSale = function(id) {
+    const s = getSaleById(id); if (!s || s.cancelled) return;
+    const reason = prompt('اكتب سبب إلغاء الفاتورة:');
+    if (!reason || !reason.trim()) return;
+    if (!confirm(`تأكيد إلغاء الفاتورة ${id}؟ سيتم الاحتفاظ بسجلها الأصلي.`)) return;
+    if (!s.originalSnapshot) s.originalSnapshot = JSON.parse(JSON.stringify(s));
+    s.cancelled = true; s.netTotal = 0;
+    s.adjustments = Array.isArray(s.adjustments) ? s.adjustments : [];
+    s.adjustments.push({type:'cancel', reason:reason.trim(), at:new Date().toISOString()});
+    persistState(); renderReports(); renderSalesHistory();
+    alert('تم إلغاء الفاتورة مع الاحتفاظ بسجلها الأصلي.');
+  };
+
+  function renderReports() {
+    renderSalesHistory();
+    const period = document.getElementById('reportPeriodSelect').value;
+    const customBox = document.getElementById('customDateRangeBox');
+    const now = new Date();
+    customBox.style.display = period === 'custom' ? 'grid' : 'none';
+
+    const mode = document.querySelector('input[name="reportCurrencyMode"]:checked')?.value || localStorage.getItem('fp_report_currency_mode') || 'convert';
+    const rateInput = document.getElementById('exchangeRateInput');
+    const exchangeRate = Math.max(0.01, Number(rateInput.value) || 55);
+    localStorage.setItem('fp_report_currency_mode', mode);
+    localStorage.setItem('fp_report_eur_rate', String(exchangeRate));
+
+    const dateSet = new Set();
+    state.sales.forEach(s => dateSet.add(s.date));
+    Object.keys(state.custodyByDate).forEach(d => dateSet.add(d));
+    Object.keys(state.expensesByDate).forEach(d => dateSet.add(d));
+    let dates = Array.from(dateSet).sort().reverse();
+
+    if (period === 'today') dates = dates.filter(d => d === todayStr);
+    else if (period === '7days') {
+      const limit = new Date(); limit.setDate(now.getDate() - 7);
+      dates = dates.filter(d => new Date(d) >= limit);
+    } else if (period === '30days') {
+      const limit = new Date(); limit.setDate(now.getDate() - 30);
+      dates = dates.filter(d => new Date(d) >= limit);
+    } else if (period === 'custom') {
+      const start = document.getElementById('customStartDate').value;
+      const end = document.getElementById('customEndDate').value;
+      if (start) dates = dates.filter(d => d >= start);
+      if (end) dates = dates.filter(d => d <= end);
+    }
+
+    const totalsFor = sales => sales.reduce((acc, sale) => {
+      const currency = String(sale.currency || 'EGP').toUpperCase() === 'EUR' ? 'EUR' : 'EGP';
+      acc[currency] += Number(sale.netTotal !== undefined ? sale.netTotal : sale.total || 0);
+      return acc;
+    }, { EGP: 0, EUR: 0 });
+    const money = (amount, currency) => `${Number(amount || 0).toFixed(2)} ${currency}`;
+    const displaySales = totals => mode === 'convert'
+      ? money(totals.EGP + totals.EUR * exchangeRate, 'EGP')
+      : [totals.EGP ? money(totals.EGP, 'EGP') : '', totals.EUR ? money(totals.EUR, 'EUR') : ''].filter(Boolean).join(' + ') || '0.00 EGP';
+
+    let sumCustody = 0, sumExpenses = 0, totalOrders = 0;
+    const sumSalesByCurrency = { EGP: 0, EUR: 0 };
+    const tbody = document.getElementById('dailyBreakdownBody');
+    tbody.innerHTML = dates.map(d => {
+      const daySales = state.sales.filter(s => s.date === d);
+      const dayTotals = totalsFor(daySales);
+      const cust = Number(state.custodyByDate[d] || 0);
+      const expList = state.expensesByDate[d] || [];
+      const dayExp = expList.reduce((a, b) => a + Number(b.amount || 0), 0);
+      sumCustody += cust; sumExpenses += dayExp; totalOrders += daySales.length;
+      sumSalesByCurrency.EGP += dayTotals.EGP;
+      sumSalesByCurrency.EUR += dayTotals.EUR;
+      return `<tr><td style="font-weight:700;">${d}</td><td>${daySales.length}</td><td>${cust.toFixed(2)} EGP</td><td style="color:var(--danger);">${dayExp.toFixed(2)} EGP</td><td style="color:var(--gold-main); font-weight:800;">${displaySales(dayTotals)}</td></tr>`;
+    }).join('');
+
+    const totalSalesDisplay = displaySales(sumSalesByCurrency);
+    const netDrawerEGP = sumCustody + sumSalesByCurrency.EGP + (mode === 'convert' ? sumSalesByCurrency.EUR * exchangeRate : 0) - sumExpenses;
+    const netDrawerDisplay = mode === 'convert'
+      ? money(netDrawerEGP, 'EGP')
+      : `${money(sumCustody + sumSalesByCurrency.EGP - sumExpenses, 'EGP')}${sumSalesByCurrency.EUR ? ' | مبيعات ' + money(sumSalesByCurrency.EUR, 'EUR') : ''}`;
+
+    document.getElementById('dailyBreakdownFoot').innerHTML = `<tr style="background:rgba(212,175,55,0.16); font-weight:900;"><td>الإجمالي</td><td>${totalOrders}</td><td>${sumCustody.toFixed(2)} EGP</td><td style="color:var(--danger);">${sumExpenses.toFixed(2)} EGP</td><td style="color:var(--gold-main);">${totalSalesDisplay}</td></tr>`;
+    document.getElementById('statTotalSalesVal').textContent = totalSalesDisplay;
+    document.getElementById('statNetDrawerVal').textContent = netDrawerDisplay;
+  }
+
+  document.getElementById('printReportBtn').addEventListener('click', () => {
+    renderReports();
+    const reportSection = document.getElementById('view-reports');
+    const printable = reportSection.cloneNode(true);
+    printable.querySelectorAll('.no-print').forEach(element => element.remove());
+    const printWindow = window.open('', '_blank');
+
+    if (!printWindow) {
+      // Android/Chrome may block popups; print the report using the page's dedicated print CSS.
+      document.body.classList.add('printing-report-only');
+      window.print();
+      setTimeout(() => document.body.classList.remove('printing-report-only'), 800);
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(`<!DOCTYPE html>
+      <html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>تقرير FRESHLY &amp; PREMIER</title>
+      <style>
+        *{box-sizing:border-box} body{font-family:Arial,Tahoma,sans-serif;color:#111;background:#fff;margin:18px}
+        h3,h4{font-size:16px;margin:0 0 12px;color:#111!important}
+        .view-section{display:flex!important;flex-direction:column;gap:10px;height:auto!important}
+        .panel-box{display:block;background:#fff!important;color:#111!important;border:1px solid #bbb;border-radius:6px;padding:10px;margin-bottom:8px;overflow:visible!important;break-inside:avoid}
+        table{width:100%;border-collapse:collapse;font-size:12px} th,td{border:1px solid #bbb;padding:7px;text-align:right;color:#111!important}
+        th{font-weight:bold} .data-table{width:100%} .data-table th,.data-table td{border:1px solid #bbb}
+        @media print{body{margin:10mm}.panel-box{break-inside:avoid}}
+      </style></head><body>${printable.outerHTML}</body></html>`);
+    printWindow.document.close();
+    // تشغيل الطباعة بعد اكتمال بناء صفحة التقرير في نافذة الطباعة.
+    setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (error) {
+        console.error('Report printing failed:', error);
+        alert('تعذر فتح الطباعة. حاول السماح بالنوافذ المنبثقة ثم أعد المحاولة.');
+      }
+    }, 400);
   });
 
-  window.addEventListener("online", () => {
-    networkOnline = true;
-    initFirebaseAndLan();
+  const savedReportMode = localStorage.getItem('fp_report_currency_mode') || 'convert';
+  const savedExchangeRate = localStorage.getItem('fp_report_eur_rate');
+  const savedModeRadio = document.querySelector(`input[name="reportCurrencyMode"][value="${savedReportMode}"]`);
+  if (savedModeRadio) savedModeRadio.checked = true;
+  if (savedExchangeRate && Number(savedExchangeRate) > 0) document.getElementById('exchangeRateInput').value = savedExchangeRate;
+  document.querySelectorAll('input[name="reportCurrencyMode"]').forEach(el => el.addEventListener('change', renderReports));
+  document.getElementById('exchangeRateInput').addEventListener('input', renderReports);
+  document.getElementById('reportPeriodSelect').addEventListener('change', renderReports);
+  document.getElementById('customStartDate').addEventListener('change', renderReports);
+  document.getElementById('customEndDate').addEventListener('change', renderReports);
+
+  document.getElementById('saveCustodyBtn').addEventListener('click', () => {
+    const d = document.getElementById('custodyDateInput').value || todayStr;
+    state.custodyByDate[d] = Number(document.getElementById('custodyAmountInput').value || 0);
+    persistState();
+    renderReports();
+    alert('تم حفظ العهدة بنجاح ✅');
   });
 
-  window.addEventListener("offline", () => {
-    networkOnline = false;
-    dbConnected = false;
-    db = lanDb;
-    updateConnectionBadge();
+  document.getElementById('addExpenseBtn').addEventListener('click', () => {
+    const d = document.getElementById('expenseDateInput').value || todayStr;
+    const amount = Number(document.getElementById('expenseAmountInput').value || 0);
+    const desc = document.getElementById('expenseDescInput').value.trim() || 'مصروف';
+    if (amount <= 0) return alert('أدخل مبلغ صحيح');
+    if (!state.expensesByDate[d]) state.expensesByDate[d] = [];
+    state.expensesByDate[d].push({ amount, desc });
+    persistState();
+    renderReports();
+    document.getElementById('expenseAmountInput').value = '';
+    document.getElementById('expenseDescInput').value = '';
+    alert('تم تسجيل المصروف بنجاح 💸');
   });
 
-  els.currencySelect.value = state.currency;
-  document.documentElement.lang = state.lang;
-  document.documentElement.dir = state.lang === "ar" ? "rtl" : "ltr";
-  els.langToggleBtn.textContent = state.lang === "ar" ? "🌐 EN" : "🌐 AR";
+  function showReceiptModal(sale) {
+    const modal = document.getElementById('receiptModal');
+    const area = document.getElementById('receiptPrintArea');
+    area.innerHTML = `
+      <div class="receipt-center"><b>FRESHLY & PREMIER</b><br>رقم: ${sale.id}</div>
+      <div class="receipt-line"></div>
+      <div>العميل: ${sale.customer}<br>التاريخ: ${sale.date}</div>
+      <div class="receipt-line"></div>
+      الإجمالي: <b>${formatMoney(sale.total)}</b>
+    `;
+    document.getElementById('qrcodeContainer').innerHTML = "";
+    new QRCode(document.getElementById("qrcodeContainer"), { text: `Invoice: ${sale.id}`, width: 90, height: 90 });
+    modal.style.display = 'flex';
+  }
 
-  renderProducts();
-  renderPosCart();
-  renderSalesSummary();
-  initFirebaseAndLan();
-})();
+  window.closeReceiptModal = () => document.getElementById('receiptModal').style.display = 'none';
+  window.printDirectReceipt = () => window.print();
+  window.sendWhatsAppReceipt = () => window.open(`https://wa.me/201119843222?text=${encodeURIComponent('شكراً لطلبك من FRESHLY!')}`, '_blank');
+
+  function switchTab(name) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === name));
+    document.querySelectorAll('.view-section').forEach(s => s.classList.toggle('active', s.id === `view-${name}`));
+    if (name === 'pending') renderHeldOrders();
+    if (name === 'reports') renderReports();
+  }
+
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const tab = btn.getAttribute('data-tab');
+    if (tab && tab !== 'menu') btn.addEventListener('click', () => switchTab(tab));
+  });
+
+  document.getElementById('saleDateInput').value = todayStr;
+  document.getElementById('custodyDateInput').value = todayStr;
+  document.getElementById('expenseDateInput').value = todayStr;
+  document.getElementById('customStartDate').value = todayStr;
+  document.getElementById('customEndDate').value = todayStr;
+
+  renderCartFull();
+  renderHeldOrders();
+});
 </script>
 </body>
 </html>
